@@ -90,7 +90,7 @@ export default function SettingsPage() {
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
           >
             {MODEL_OPTIONS.map((m) => (
               <option key={m} value={m}>
@@ -112,7 +112,7 @@ export default function SettingsPage() {
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder={hasApiKey ? apiKeyPreview ?? "" : "sk-..."}
-            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400"
           />
           <p className="mt-1 text-xs text-neutral-500">
             {hasApiKey

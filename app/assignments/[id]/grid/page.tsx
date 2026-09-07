@@ -62,7 +62,7 @@ export default async function GridPage({
               <th className="px-4 py-3 whitespace-nowrap">Total</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-neutral-900">
             {assignment.students.map((student) => {
               const answerByQuestion = new Map(
                 student.answers.map((a) => [a.questionId, a])

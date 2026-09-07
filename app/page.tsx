@@ -240,7 +240,7 @@ export default function HomePage() {
                 <input
                   value={assignmentName}
                   onChange={(e) => setAssignmentName(e.target.value)}
-                  className="mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
                 />
               </div>
               <button
@@ -264,7 +264,9 @@ export default function HomePage() {
                   className="rounded-md border border-neutral-200 p-4"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">{q.header}</span>
+                    <span className="text-sm font-semibold text-neutral-900">
+                      {q.header}
+                    </span>
                     <label className="flex items-center gap-1 text-xs text-neutral-500">
                       Points
                       <input
@@ -276,7 +278,7 @@ export default function HomePage() {
                             maxScore: Number(e.target.value) || 1,
                           })
                         }
-                        className="w-16 rounded border border-neutral-300 px-2 py-1 text-xs"
+                        className="w-16 rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900"
                       />
                     </label>
                   </div>
@@ -287,7 +289,7 @@ export default function HomePage() {
                     }
                     placeholder="Paste the grading criteria / answer key for this question..."
                     rows={5}
-                    className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+                    className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400"
                   />
                 </div>
               ))}
@@ -330,7 +332,7 @@ export default function HomePage() {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="text-neutral-900">
                 {assignments.map((a) => (
                   <tr key={a.id} className="border-t border-neutral-100">
                     <td className="px-4 py-3 font-medium">{a.name}</td>

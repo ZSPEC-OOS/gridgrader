@@ -12,11 +12,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* GridGrader is a light, professional theme regardless of OS/browser
+   dark-mode preference — deliberately no prefers-color-scheme override. */
+html {
+  color-scheme: light;
 }
 
 body {
