@@ -36,6 +36,12 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
+
   async function load() {
     setLoading(true);
     setLoadFailed(false);
@@ -90,9 +96,36 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleTest() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/settings/test", { method: "POST" });
+      const data = await parseJsonResponse<{
+        ok: boolean;
+        model?: string;
+        reply?: string;
+        error?: string;
+      }>(res);
+      setTestResult(
+        data.ok
+          ? { ok: true, message: `${data.model} responded: "${data.reply}"` }
+          : { ok: false, message: data.error ?? "Test failed." }
+      );
+    } catch (err) {
+      setTestResult({
+        ok: false,
+        message: err instanceof Error ? err.message : "Test failed.",
+      });
+    } finally {
+      setTesting(false);
+    }
+  }
+
   async function handleSave() {
     setError(null);
     setSaved(false);
+    setTestResult(null);
 
     if (!hasPin) {
       if (newPin.length < MIN_PIN_LENGTH) {
@@ -201,6 +234,24 @@ export default function SettingsPage() {
             </div>
           </dl>
 
+          <div>
+            <button
+              onClick={handleTest}
+              disabled={testing || !hasApiKey}
+              className="rounded border border-neutral-300 px-4 py-1.5 text-sm font-medium text-neutral-700 hover:border-brand-maroon hover:text-brand-maroon disabled:opacity-50 dark:border-border dark:text-foreground dark:hover:border-brand-crimson dark:hover:text-brand-crimson"
+            >
+              {testing ? "Testing…" : "Test connection"}
+            </button>
+            {testResult && (
+              <p
+                className={`mt-2 text-sm ${testResult.ok ? "text-green-600 dark:text-green-400" : "text-red-600"}`}
+              >
+                {testResult.ok ? "✓ " : "✗ "}
+                {testResult.message}
+              </p>
+            )}
+          </div>
+
           <div className="border-t border-neutral-200 pt-5 dark:border-border">
             <label className="block text-xs font-medium text-neutral-500 dark:text-muted">
               Enter PIN to edit
@@ -296,6 +347,28 @@ export default function SettingsPage() {
                 ? "A key is already saved. Leave blank to keep it."
                 : "No key saved yet."}
             </p>
+          </div>
+
+          <div>
+            <button
+              onClick={handleTest}
+              disabled={testing || !hasApiKey}
+              className="rounded border border-neutral-300 px-4 py-1.5 text-sm font-medium text-neutral-700 hover:border-brand-maroon hover:text-brand-maroon disabled:opacity-50 dark:border-border dark:text-foreground dark:hover:border-brand-crimson dark:hover:text-brand-crimson"
+            >
+              {testing ? "Testing…" : "Test connection"}
+            </button>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-muted">
+              Tests the currently saved key/model — save first if you just
+              changed them.
+            </p>
+            {testResult && (
+              <p
+                className={`mt-2 text-sm ${testResult.ok ? "text-green-600 dark:text-green-400" : "text-red-600"}`}
+              >
+                {testResult.ok ? "✓ " : "✗ "}
+                {testResult.message}
+              </p>
+            )}
           </div>
 
           {!hasPin && (
