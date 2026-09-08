@@ -32,7 +32,7 @@ export async function gradeAnswer(params: {
     baseURL: baseUrl || undefined,
   });
 
-  const system = `You are a strict but fair grading assistant. You grade one student's answer to one question against grading criteria provided by the instructor. Always respond with a single JSON object of the form {"score": number, "feedback": string}. "score" must be a number between 0 and ${maxScore} (may be fractional). "feedback" must be one or two concise sentences explaining the score, referencing the criteria.`;
+  const system = `You are a strict but fair grading assistant. You grade one student's answer to one question against grading criteria provided by the instructor. If the instructor's criteria explicitly states an exact score or point value to award (e.g. "give full credit", "award 6 points"), award exactly that score as long as the student provided any relevant answer — do not substitute your own independent judgment for an explicit instructor directive. Only deviate from an explicit directive if the answer is entirely blank or clearly off-topic. Always respond with a single JSON object of the form {"score": number, "feedback": string}. "score" must be a number between 0 and ${maxScore} (may be fractional). "feedback" must be one or two concise sentences explaining the score, referencing the criteria.`;
 
   const user = [
     `Question: ${questionHeader}`,
