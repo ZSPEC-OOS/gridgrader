@@ -179,9 +179,29 @@ export default function HomePage() {
       const res = await fetch(`/api/assignments/${id}/grade`, {
         method: "POST",
       });
-      await parseJsonResponse(res);
+      const data = await parseJsonResponse<{
+        graded: number;
+        total: number;
+        errors: string[];
+      }>(res);
       await loadAssignments();
-      router.push(`/assignments/${id}/grid`);
+
+      if (data.errors.length > 0) {
+        const preview = data.errors.slice(0, 5).join("\n");
+        const more =
+          data.errors.length > 5
+            ? `\n…and ${data.errors.length - 5} more`
+            : "";
+        alert(
+          `Graded ${data.graded} of ${data.total} answers. ${data.errors.length} failed:\n${preview}${more}`
+        );
+      }
+
+      // Only jump to the grid if something actually got graded — otherwise
+      // it's just a confusing wall of dashes.
+      if (data.graded > 0) {
+        router.push(`/assignments/${id}/grid`);
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Grading failed.");
       await loadAssignments();
