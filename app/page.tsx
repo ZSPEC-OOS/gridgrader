@@ -195,8 +195,49 @@ export default function HomePage() {
     let gradedTotal = 0;
     let failedTotal = 0;
     let total = 0;
+    let polledGraded = 0;
     const allErrors: string[] = [];
     setGradingProgress({ assignmentName, graded: 0, failed: 0, total: 0 });
+
+    // Individual answers are written to the database as soon as each one
+    // finishes grading — well before a batch's HTTP response returns — so
+    // polling a lightweight progress endpoint on an interval gives a live
+    // readout instead of one that only advances at batch boundaries.
+    // `since` (the server's own clock, fetched once up front) excludes
+    // grades that predate this run, so a re-grade — where most Grade rows
+    // already exist and only get updated — doesn't start the bar near
+    // 100%. Until `since` is known, polls are priming-only: they must not
+    // feed an unfiltered (i.e. whole-assignment) count into `polledGraded`.
+    let since: string | null = null;
+    async function pollProgress() {
+      try {
+        const res = await fetch(
+          `/api/assignments/${id}/grade/progress${since ? `?since=${encodeURIComponent(since)}` : ""}`
+        );
+        if (!res.ok) return;
+        const data: { graded: number; total: number; serverTime: string } =
+          await res.json();
+        if (data.total > 0) total = data.total;
+        if (!since) {
+          since = data.serverTime;
+          return;
+        }
+        polledGraded = Math.max(polledGraded, data.graded);
+        setGradingProgress({
+          assignmentName,
+          graded: polledGraded,
+          failed: failedTotal,
+          total,
+        });
+      } catch {
+        // Transient polling failure — the batch loop below is the source
+        // of truth for whether grading actually finished, so just skip
+        // this tick and try again on the next interval.
+      }
+    }
+
+    await pollProgress();
+    const pollInterval = setInterval(pollProgress, 1000);
 
     try {
       // The server grades one bounded batch per request and reports back
@@ -223,12 +264,7 @@ export default function HomePage() {
         failedTotal += data.failed;
         total = data.total;
         allErrors.push(...data.errors);
-        setGradingProgress({
-          assignmentName,
-          graded: gradedTotal,
-          failed: failedTotal,
-          total,
-        });
+        await pollProgress();
 
         if (data.done) break;
         offset = data.offset + data.limit;
@@ -254,6 +290,7 @@ export default function HomePage() {
       alert(err instanceof Error ? err.message : "Grading failed.");
       await loadAssignments();
     } finally {
+      clearInterval(pollInterval);
       setGradingId(null);
       setGradingProgress(null);
     }
