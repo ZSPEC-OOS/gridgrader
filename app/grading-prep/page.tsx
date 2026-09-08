@@ -69,7 +69,13 @@ export default function GradingPrepPage() {
 
       const results = await mapWithConcurrency(entries, CONCURRENCY, async (entry) => {
         try {
-          const blob = await entry.async("blob");
+          // JSZip's extracted blobs carry no MIME type; an untyped Blob
+          // becomes "application/octet-stream" on the wire once sent
+          // through FormData (per the Fetch spec), which the vision API
+          // then rejects outright. Since this endpoint only ever accepts
+          // .png entries, force the correct type explicitly.
+          const rawBlob = await entry.async("blob");
+          const blob = new Blob([rawBlob], { type: "image/png" });
           const form = new FormData();
           form.append("file", blob, entry.name);
           const res = await fetch("/api/grading-prep/extract", {

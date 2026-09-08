@@ -38,7 +38,11 @@ export async function POST(req: NextRequest) {
       model: settings.model,
       useMaxCompletionTokens: settings.useMaxCompletionTokens,
       imageBase64: buffer.toString("base64"),
-      mimeType: file.type || "image/png",
+      // This endpoint only ever accepts .png uploads, so normalize any
+      // non-image content type (e.g. a browser sending an untyped Blob as
+      // "application/octet-stream" over the wire) to image/png rather than
+      // passing it through to the vision API, which rejects anything else.
+      mimeType: file.type.startsWith("image/") ? file.type : "image/png",
     });
 
     return NextResponse.json(result);
