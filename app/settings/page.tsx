@@ -7,18 +7,12 @@ type SettingsResponse = {
   model: string;
   hasApiKey: boolean;
   apiKeyPreview: string | null;
+  savedModels: string[];
 };
-
-const MODEL_OPTIONS = [
-  "gpt-4o-mini",
-  "gpt-4o",
-  "gpt-4.1",
-  "gpt-4.1-mini",
-  "o4-mini",
-];
 
 export default function SettingsPage() {
   const [model, setModel] = useState("gpt-4o-mini");
+  const [savedModels, setSavedModels] = useState<string[]>([]);
   const [apiKey, setApiKey] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
   const [apiKeyPreview, setApiKeyPreview] = useState<string | null>(null);
@@ -33,6 +27,7 @@ export default function SettingsPage() {
         const res = await fetch("/api/settings");
         const data = await parseJsonResponse<SettingsResponse>(res);
         setModel(data.model);
+        setSavedModels(data.savedModels);
         setHasApiKey(data.hasApiKey);
         setApiKeyPreview(data.apiKeyPreview);
       } catch (err) {
@@ -57,6 +52,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ provider: "openai", model, apiKey }),
       });
       const data = await parseJsonResponse<SettingsResponse>(res);
+      setSavedModels(data.savedModels);
       setHasApiKey(data.hasApiKey);
       setApiKeyPreview(data.apiKeyPreview);
       setApiKey("");
@@ -89,9 +85,9 @@ export default function SettingsPage() {
             Provider
           </label>
           <select
-            disabled
             value="openai"
-            className="mt-1 w-full rounded border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm text-neutral-600 dark:border-border dark:bg-surface-muted dark:text-muted"
+            onChange={() => {}}
+            className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
           >
             <option value="openai">OpenAI</option>
           </select>
@@ -105,16 +101,18 @@ export default function SettingsPage() {
             list="model-options"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            placeholder="e.g. gpt-4o-mini"
+            placeholder="Type a model name, e.g. gpt-4o-mini"
             className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
           />
           <datalist id="model-options">
-            {MODEL_OPTIONS.map((m) => (
+            {savedModels.map((m) => (
               <option key={m} value={m} />
             ))}
           </datalist>
           <p className="mt-1 text-xs text-neutral-500 dark:text-muted">
-            Type any model name, or pick one of the suggestions.
+            {savedModels.length > 0
+              ? "Type any model name — models you've saved before are suggested."
+              : "Type any model name and save it; it'll be suggested next time."}
           </p>
         </div>
 

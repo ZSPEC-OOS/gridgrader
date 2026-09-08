@@ -16,6 +16,7 @@ export async function GET() {
         model: "gpt-4o-mini",
         hasApiKey: false,
         apiKeyPreview: null,
+        savedModels: [],
       });
     }
 
@@ -26,6 +27,7 @@ export async function GET() {
       apiKeyPreview: settings.apiKey
         ? `sk-...${settings.apiKey.slice(-4)}`
         : null,
+      savedModels: settings.savedModels,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
@@ -45,6 +47,10 @@ export async function POST(req: NextRequest) {
       where: { id: SETTINGS_ID },
     });
 
+    const savedModels = Array.from(
+      new Set([...(existing?.savedModels ?? []), model])
+    );
+
     const settings = await prisma.settings.upsert({
       where: { id: SETTINGS_ID },
       create: {
@@ -52,6 +58,7 @@ export async function POST(req: NextRequest) {
         provider,
         model,
         apiKey: apiKey || null,
+        savedModels,
       },
       update: {
         provider,
@@ -59,6 +66,7 @@ export async function POST(req: NextRequest) {
         // Only overwrite the stored key if a new one was actually submitted,
         // so re-saving the model choice doesn't clobber the existing key.
         apiKey: apiKey ? apiKey : existing?.apiKey,
+        savedModels,
       },
     });
 
@@ -69,6 +77,7 @@ export async function POST(req: NextRequest) {
       apiKeyPreview: settings.apiKey
         ? `sk-...${settings.apiKey.slice(-4)}`
         : null,
+      savedModels: settings.savedModels,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });

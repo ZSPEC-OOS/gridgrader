@@ -38,7 +38,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 width={1136}
                 height={281}
                 priority
-                className="h-8 w-auto"
+                className="h-8 w-auto dark:hidden"
+              />
+              <Image
+                src="/logo-full-dark.png"
+                alt="GridGrader"
+                width={1136}
+                height={281}
+                priority
+                className="hidden h-8 w-auto dark:block"
               />
             </Link>
             <nav className="flex items-center gap-6 text-sm font-medium text-neutral-600 dark:text-muted">
