@@ -65,6 +65,7 @@ export default function HomePage() {
   const [gradingId, setGradingId] = useState<string | null>(null);
   const [gradingProgress, setGradingProgress] =
     useState<GradingProgress | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -296,6 +297,20 @@ export default function HomePage() {
     }
   }
 
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
+      await parseJsonResponse<{ ok: boolean }>(res);
+      await loadAssignments();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 space-y-10">
       <section>
@@ -427,7 +442,7 @@ export default function HomePage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold tracking-tight">Assignments</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Assignments</h2>
         <div className="mt-4 overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-border dark:bg-surface">
           {loadingList ? (
             <p className="p-6 text-sm text-neutral-500 dark:text-muted">Loading…</p>
@@ -487,6 +502,13 @@ export default function HomePage() {
                             : a.gradedAt
                               ? "Re-grade"
                               : "Grade"}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(a.id, a.name)}
+                          disabled={deletingId === a.id}
+                          className="rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:border-red-500 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+                        >
+                          {deletingId === a.id ? "Deleting…" : "Delete"}
                         </button>
                       </div>
                     </td>
