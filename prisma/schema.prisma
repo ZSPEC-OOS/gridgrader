@@ -84,4 +84,5 @@ model Settings {
   model       String   @default("gpt-4o-mini")
   savedModels String[] @default([])
   pinHash     String?
+  useMaxCompletionTokens Boolean @default(false)
 }

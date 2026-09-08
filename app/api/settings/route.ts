@@ -21,6 +21,7 @@ export async function GET() {
         apiKeyPreview: null,
         savedModels: [],
         hasPin: false,
+        useMaxCompletionTokens: false,
       });
     }
 
@@ -34,6 +35,7 @@ export async function GET() {
         : null,
       savedModels: settings.savedModels,
       hasPin: Boolean(settings.pinHash),
+      useMaxCompletionTokens: settings.useMaxCompletionTokens,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
   const baseUrlInput =
     typeof body.baseUrl === "string" ? body.baseUrl.trim() : "";
   const newPin = typeof body.newPin === "string" ? body.newPin.trim() : "";
+  const useMaxCompletionTokens = Boolean(body.useMaxCompletionTokens);
 
   if (baseUrlInput) {
     try {
@@ -95,6 +98,7 @@ export async function POST(req: NextRequest) {
         baseUrl: baseUrlInput || null,
         savedModels,
         pinHash,
+        useMaxCompletionTokens,
       },
       update: {
         provider,
@@ -105,6 +109,7 @@ export async function POST(req: NextRequest) {
         baseUrl: baseUrlInput || null,
         savedModels,
         pinHash,
+        useMaxCompletionTokens,
       },
     });
 
@@ -118,6 +123,7 @@ export async function POST(req: NextRequest) {
         : null,
       savedModels: settings.savedModels,
       hasPin: Boolean(settings.pinHash),
+      useMaxCompletionTokens: settings.useMaxCompletionTokens,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });

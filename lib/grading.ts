@@ -9,14 +9,23 @@ export async function gradeAnswer(params: {
   apiKey: string;
   baseUrl?: string | null;
   model: string;
+  useMaxCompletionTokens?: boolean;
   questionHeader: string;
   criteria: string;
   maxScore: number;
   studentName: string;
   answerText: string;
 }): Promise<GradeResult> {
-  const { apiKey, baseUrl, model, questionHeader, criteria, maxScore, answerText } =
-    params;
+  const {
+    apiKey,
+    baseUrl,
+    model,
+    useMaxCompletionTokens,
+    questionHeader,
+    criteria,
+    maxScore,
+    answerText,
+  } = params;
 
   const client = new OpenAI({
     apiKey,
@@ -34,6 +43,12 @@ export async function gradeAnswer(params: {
     answerText || "(no answer provided)",
   ].join("\n");
 
+  // Newer models (the GPT-5/o-series reasoning family) reject the legacy
+  // `max_tokens` param and require `max_completion_tokens` instead.
+  const tokenLimitField = useMaxCompletionTokens
+    ? { max_completion_tokens: 500 }
+    : { max_tokens: 500 };
+
   const response = await client.chat.completions.create({
     model,
     messages: [
@@ -42,6 +57,7 @@ export async function gradeAnswer(params: {
     ],
     response_format: { type: "json_object" },
     temperature: 0,
+    ...tokenLimitField,
   });
 
   const raw = response.choices[0]?.message?.content ?? "{}";

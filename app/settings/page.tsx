@@ -10,6 +10,7 @@ type SettingsResponse = {
   apiKeyPreview: string | null;
   savedModels: string[];
   hasPin: boolean;
+  useMaxCompletionTokens: boolean;
 };
 
 const MIN_PIN_LENGTH = 4;
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const [model, setModel] = useState("gpt-4o-mini");
   const [savedModels, setSavedModels] = useState<string[]>([]);
   const [baseUrl, setBaseUrl] = useState("");
+  const [useMaxCompletionTokens, setUseMaxCompletionTokens] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
   const [apiKeyPreview, setApiKeyPreview] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export default function SettingsPage() {
       setModel(data.model);
       setSavedModels(data.savedModels);
       setBaseUrl(data.baseUrl ?? "");
+      setUseMaxCompletionTokens(data.useMaxCompletionTokens);
       setHasApiKey(data.hasApiKey);
       setApiKeyPreview(data.apiKeyPreview);
       setHasPin(data.hasPin);
@@ -147,6 +150,7 @@ export default function SettingsPage() {
           provider: "openai",
           model,
           baseUrl,
+          useMaxCompletionTokens,
           apiKey,
           newPin: hasPin ? undefined : newPin,
         }),
@@ -154,6 +158,7 @@ export default function SettingsPage() {
       const data = await parseJsonResponse<SettingsResponse>(res);
       setSavedModels(data.savedModels);
       setBaseUrl(data.baseUrl ?? "");
+      setUseMaxCompletionTokens(data.useMaxCompletionTokens);
       setHasApiKey(data.hasApiKey);
       setApiKeyPreview(data.apiKeyPreview);
       setHasPin(data.hasPin);
@@ -225,6 +230,12 @@ export default function SettingsPage() {
             <div className="flex justify-between gap-4">
               <dt className="text-neutral-500 dark:text-muted">Model</dt>
               <dd className="font-medium text-neutral-900 dark:text-foreground">{model}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-neutral-500 dark:text-muted">Token parameter</dt>
+              <dd className="font-medium text-neutral-900 dark:text-foreground">
+                {useMaxCompletionTokens ? "max_completion_tokens" : "max_tokens"}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-neutral-500 dark:text-muted">API key</dt>
@@ -330,6 +341,24 @@ export default function SettingsPage() {
                 : "Type any model name and save it; it'll be suggested next time."}
             </p>
           </div>
+
+          <label className="flex items-start gap-2 text-sm text-neutral-700 dark:text-foreground">
+            <input
+              type="checkbox"
+              checked={useMaxCompletionTokens}
+              onChange={(e) => setUseMaxCompletionTokens(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              This model requires{" "}
+              <code className="text-xs">max_completion_tokens</code> instead
+              of <code className="text-xs">max_tokens</code>
+              <span className="block text-xs text-neutral-500 dark:text-muted">
+                Needed for newer reasoning models (GPT-5 / o-series) — OpenAI
+                rejects the older parameter name for those.
+              </span>
+            </span>
+          </label>
 
           <div>
             <label className="block text-xs font-medium text-neutral-500 dark:text-muted">

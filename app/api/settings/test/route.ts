@@ -16,10 +16,14 @@ export async function POST() {
       baseURL: settings.baseUrl || undefined,
     });
 
+    const tokenLimitField = settings.useMaxCompletionTokens
+      ? { max_completion_tokens: 5 }
+      : { max_tokens: 5 };
+
     const response = await client.chat.completions.create({
       model: settings.model,
       messages: [{ role: "user", content: "Reply with exactly: OK" }],
-      max_tokens: 5,
+      ...tokenLimitField,
     });
 
     const reply = response.choices[0]?.message?.content?.trim() || "(empty response)";

@@ -61,6 +61,7 @@ export async function POST(
         apiKey: settings.apiKey!,
         baseUrl: settings.baseUrl,
         model: settings.model,
+        useMaxCompletionTokens: settings.useMaxCompletionTokens,
         questionHeader: answer.question.header,
         criteria: answer.question.criteria ?? "",
         maxScore: answer.question.maxScore,

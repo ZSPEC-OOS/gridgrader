@@ -383,24 +383,25 @@ export default function HomePage() {
                         >
                           Edit
                         </Link>
-                        {a.status === "GRADED" ? (
+                        {a.gradedAt && (
                           <Link
                             href={`/assignments/${a.id}/grid`}
                             className="rounded bg-brand-ink px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-maroon dark:bg-brand-crimson dark:hover:opacity-90"
                           >
                             View grid
                           </Link>
-                        ) : (
-                          <button
-                            onClick={() => handleGrade(a.id)}
-                            disabled={gradingId === a.id || a.status === "GRADING"}
-                            className="rounded bg-brand-crimson px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
-                          >
-                            {gradingId === a.id || a.status === "GRADING"
-                              ? "Grading…"
-                              : "Grade"}
-                          </button>
                         )}
+                        <button
+                          onClick={() => handleGrade(a.id)}
+                          disabled={gradingId === a.id || a.status === "GRADING"}
+                          className="rounded bg-brand-crimson px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                        >
+                          {gradingId === a.id || a.status === "GRADING"
+                            ? "Grading…"
+                            : a.gradedAt
+                              ? "Re-grade"
+                              : "Grade"}
+                        </button>
                       </div>
                     </td>
                   </tr>
