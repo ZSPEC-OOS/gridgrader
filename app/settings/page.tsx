@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { parseJsonResponse } from "@/lib/apiClient";
+
+type SettingsResponse = {
+  model: string;
+  hasApiKey: boolean;
+  apiKeyPreview: string | null;
+};
 
 const MODEL_OPTIONS = [
   "gpt-4o-mini",
@@ -21,14 +28,22 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data) => {
+    async function load() {
+      try {
+        const res = await fetch("/api/settings");
+        const data = await parseJsonResponse<SettingsResponse>(res);
         setModel(data.model);
         setHasApiKey(data.hasApiKey);
         setApiKeyPreview(data.apiKeyPreview);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load settings."
+        );
+      } finally {
         setLoading(false);
-      });
+      }
+    }
+    load();
   }, []);
 
   async function handleSave() {
@@ -41,8 +56,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider: "openai", model, apiKey }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to save.");
+      const data = await parseJsonResponse<SettingsResponse>(res);
       setHasApiKey(data.hasApiKey);
       setApiKeyPreview(data.apiKeyPreview);
       setApiKey("");

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { parseJsonResponse } from "@/lib/apiClient";
 
 type AssignmentSummary = {
   id: string;
@@ -49,14 +50,23 @@ export default function HomePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [gradingId, setGradingId] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadAssignments = useCallback(async () => {
     setLoadingList(true);
-    const res = await fetch("/api/assignments");
-    const data = await res.json();
-    setAssignments(data);
-    setLoadingList(false);
+    setListError(null);
+    try {
+      const res = await fetch("/api/assignments");
+      const data = await parseJsonResponse<AssignmentSummary[]>(res);
+      setAssignments(data);
+    } catch (err) {
+      setListError(
+        err instanceof Error ? err.message : "Failed to load assignments."
+      );
+    } finally {
+      setLoadingList(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -153,8 +163,7 @@ export default function HomePage() {
         method: "POST",
         body: form,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to save.");
+      await parseJsonResponse<{ id: string }>(res);
       resetUpload();
       await loadAssignments();
     } catch (err) {
@@ -170,8 +179,7 @@ export default function HomePage() {
       const res = await fetch(`/api/assignments/${id}/grade`, {
         method: "POST",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Grading failed.");
+      await parseJsonResponse(res);
       await loadAssignments();
       router.push(`/assignments/${id}/grid`);
     } catch (err) {
@@ -317,6 +325,8 @@ export default function HomePage() {
         <div className="mt-4 overflow-hidden rounded-lg border border-neutral-200 bg-white">
           {loadingList ? (
             <p className="p-6 text-sm text-neutral-500">Loading…</p>
+          ) : listError ? (
+            <p className="p-6 text-sm text-red-600">{listError}</p>
           ) : assignments.length === 0 ? (
             <p className="p-6 text-sm text-neutral-500">
               No assignments yet. Upload a file above to create one.

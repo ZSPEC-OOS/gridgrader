@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseWorkbook } from "@/lib/parseWorkbook";
+import { toErrorMessage } from "@/lib/apiError";
 
 export async function GET() {
-  const assignments = await prisma.assignment.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { students: true, questions: true } },
-    },
-  });
+  try {
+    const assignments = await prisma.assignment.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { students: true, questions: true } },
+      },
+    });
 
-  return NextResponse.json(
-    assignments.map((a) => ({
-      id: a.id,
-      name: a.name,
-      status: a.status,
-      studentCount: a._count.students,
-      questionCount: a._count.questions,
-      createdAt: a.createdAt,
-      gradedAt: a.gradedAt,
-    }))
-  );
+    return NextResponse.json(
+      assignments.map((a) => ({
+        id: a.id,
+        name: a.name,
+        status: a.status,
+        studentCount: a._count.students,
+        questionCount: a._count.questions,
+        createdAt: a.createdAt,
+        gradedAt: a.gradedAt,
+      }))
+    );
+  } catch (err) {
+    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  }
 }
 
 type CriteriaInput = {
@@ -79,54 +84,63 @@ export async function POST(req: NextRequest) {
   const assignmentName =
     typeof name === "string" && name.trim() ? name.trim() : file.name;
 
-  const assignment = await prisma.assignment.create({
-    data: {
-      name: assignmentName,
-      sourceFile: file.name,
-      status: "READY_TO_GRADE",
-      questions: {
-        create: parsed.questions.map((q, i) => ({
-          index: q.index,
-          header: q.header,
-          criteria: criteriaList[i]?.criteria ?? "",
-          maxScore:
-            Number.isFinite(criteriaList[i]?.maxScore) &&
-            criteriaList[i].maxScore > 0
-              ? Math.round(criteriaList[i].maxScore)
-              : 10,
-        })),
+  try {
+    const assignment = await prisma.assignment.create({
+      data: {
+        name: assignmentName,
+        sourceFile: file.name,
+        status: "READY_TO_GRADE",
+        questions: {
+          create: parsed.questions.map((q, i) => ({
+            index: q.index,
+            header: q.header,
+            criteria: criteriaList[i]?.criteria ?? "",
+            maxScore:
+              Number.isFinite(criteriaList[i]?.maxScore) &&
+              criteriaList[i].maxScore > 0
+                ? Math.round(criteriaList[i].maxScore)
+                : 10,
+          })),
+        },
+        students: {
+          create: parsed.students.map((s) => ({
+            index: s.index,
+            name: s.name,
+          })),
+        },
       },
-      students: {
-        create: parsed.students.map((s) => ({
-          index: s.index,
-          name: s.name,
-        })),
-      },
-    },
-    include: { questions: true, students: true },
-  });
+      include: { questions: true, students: true },
+    });
 
-  const questionByIndex = new Map(
-    assignment.questions.map((q) => [q.index, q])
-  );
-  const studentByIndex = new Map(
-    assignment.students.map((s) => [s.index, s])
-  );
+    const questionByIndex = new Map(
+      assignment.questions.map((q) => [q.index, q])
+    );
+    const studentByIndex = new Map(
+      assignment.students.map((s) => [s.index, s])
+    );
 
-  const answerRows = parsed.students.flatMap((s) =>
-    s.answers.map((text, qIndex) => {
-      const student = studentByIndex.get(s.index);
-      const question = questionByIndex.get(qIndex);
-      if (!student || !question) return null;
-      return {
-        studentId: student.id,
-        questionId: question.id,
-        text,
-      };
-    })
-  ).filter((r): r is { studentId: string; questionId: string; text: string } => r !== null);
+    const answerRows = parsed.students
+      .flatMap((s) =>
+        s.answers.map((text, qIndex) => {
+          const student = studentByIndex.get(s.index);
+          const question = questionByIndex.get(qIndex);
+          if (!student || !question) return null;
+          return {
+            studentId: student.id,
+            questionId: question.id,
+            text,
+          };
+        })
+      )
+      .filter(
+        (r): r is { studentId: string; questionId: string; text: string } =>
+          r !== null
+      );
 
-  await prisma.answer.createMany({ data: answerRows });
+    await prisma.answer.createMany({ data: answerRows });
 
-  return NextResponse.json({ id: assignment.id }, { status: 201 });
+    return NextResponse.json({ id: assignment.id }, { status: 201 });
+  } catch (err) {
+    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  }
 }

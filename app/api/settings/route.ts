@@ -1,30 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { toErrorMessage } from "@/lib/apiError";
 
 const SETTINGS_ID = 1;
 
 export async function GET() {
-  const settings = await prisma.settings.findUnique({
-    where: { id: SETTINGS_ID },
-  });
-
-  if (!settings) {
-    return NextResponse.json({
-      provider: "openai",
-      model: "gpt-4o-mini",
-      hasApiKey: false,
-      apiKeyPreview: null,
+  try {
+    const settings = await prisma.settings.findUnique({
+      where: { id: SETTINGS_ID },
     });
-  }
 
-  return NextResponse.json({
-    provider: settings.provider,
-    model: settings.model,
-    hasApiKey: Boolean(settings.apiKey),
-    apiKeyPreview: settings.apiKey
-      ? `sk-...${settings.apiKey.slice(-4)}`
-      : null,
-  });
+    if (!settings) {
+      return NextResponse.json({
+        provider: "openai",
+        model: "gpt-4o-mini",
+        hasApiKey: false,
+        apiKeyPreview: null,
+      });
+    }
+
+    return NextResponse.json({
+      provider: settings.provider,
+      model: settings.model,
+      hasApiKey: Boolean(settings.apiKey),
+      apiKeyPreview: settings.apiKey
+        ? `sk-...${settings.apiKey.slice(-4)}`
+        : null,
+    });
+  } catch (err) {
+    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -35,33 +40,37 @@ export async function POST(req: NextRequest) {
     : "gpt-4o-mini";
   const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
 
-  const existing = await prisma.settings.findUnique({
-    where: { id: SETTINGS_ID },
-  });
+  try {
+    const existing = await prisma.settings.findUnique({
+      where: { id: SETTINGS_ID },
+    });
 
-  const settings = await prisma.settings.upsert({
-    where: { id: SETTINGS_ID },
-    create: {
-      id: SETTINGS_ID,
-      provider,
-      model,
-      apiKey: apiKey || null,
-    },
-    update: {
-      provider,
-      model,
-      // Only overwrite the stored key if a new one was actually submitted,
-      // so re-saving the model choice doesn't clobber the existing key.
-      apiKey: apiKey ? apiKey : existing?.apiKey,
-    },
-  });
+    const settings = await prisma.settings.upsert({
+      where: { id: SETTINGS_ID },
+      create: {
+        id: SETTINGS_ID,
+        provider,
+        model,
+        apiKey: apiKey || null,
+      },
+      update: {
+        provider,
+        model,
+        // Only overwrite the stored key if a new one was actually submitted,
+        // so re-saving the model choice doesn't clobber the existing key.
+        apiKey: apiKey ? apiKey : existing?.apiKey,
+      },
+    });
 
-  return NextResponse.json({
-    provider: settings.provider,
-    model: settings.model,
-    hasApiKey: Boolean(settings.apiKey),
-    apiKeyPreview: settings.apiKey
-      ? `sk-...${settings.apiKey.slice(-4)}`
-      : null,
-  });
+    return NextResponse.json({
+      provider: settings.provider,
+      model: settings.model,
+      hasApiKey: Boolean(settings.apiKey),
+      apiKeyPreview: settings.apiKey
+        ? `sk-...${settings.apiKey.slice(-4)}`
+        : null,
+    });
+  } catch (err) {
+    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  }
 }

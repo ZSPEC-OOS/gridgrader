@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { gradeAnswer } from "@/lib/grading";
 import { mapWithConcurrency } from "@/lib/concurrency";
+import { toErrorMessage } from "@/lib/apiError";
 
 const CONCURRENCY = 5;
 
@@ -16,32 +17,37 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  const settings = await prisma.settings.findUnique({ where: { id: 1 } });
-  if (!settings?.apiKey) {
-    return NextResponse.json(
-      { error: "No AI model configured. Add an API key on the Settings page first." },
-      { status: 400 }
-    );
-  }
+  let settings, assignment;
+  try {
+    settings = await prisma.settings.findUnique({ where: { id: 1 } });
+    if (!settings?.apiKey) {
+      return NextResponse.json(
+        { error: "No AI model configured. Add an API key on the Settings page first." },
+        { status: 400 }
+      );
+    }
 
-  const assignment = await prisma.assignment.findUnique({
-    where: { id },
-    include: {
-      questions: true,
-      students: {
-        include: { answers: { include: { question: true } } },
+    assignment = await prisma.assignment.findUnique({
+      where: { id },
+      include: {
+        questions: true,
+        students: {
+          include: { answers: { include: { question: true } } },
+        },
       },
-    },
-  });
+    });
 
-  if (!assignment) {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+    if (!assignment) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+
+    await prisma.assignment.update({
+      where: { id },
+      data: { status: "GRADING" },
+    });
+  } catch (err) {
+    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
   }
-
-  await prisma.assignment.update({
-    where: { id },
-    data: { status: "GRADING" },
-  });
 
   const answerJobs = assignment.students.flatMap((student) =>
     student.answers.map((answer) => ({ student, answer }))
@@ -89,13 +95,17 @@ export async function POST(
 
   const allFailed = answerJobs.length > 0 && errors.length === answerJobs.length;
 
-  await prisma.assignment.update({
-    where: { id },
-    data: {
-      status: allFailed ? "READY_TO_GRADE" : "GRADED",
-      gradedAt: allFailed ? undefined : new Date(),
-    },
-  });
+  try {
+    await prisma.assignment.update({
+      where: { id },
+      data: {
+        status: allFailed ? "READY_TO_GRADE" : "GRADED",
+        gradedAt: allFailed ? undefined : new Date(),
+      },
+    });
+  } catch (err) {
+    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  }
 
   return NextResponse.json({
     graded: answerJobs.length - errors.length,
