@@ -4,12 +4,16 @@ import { gradeAnswer } from "@/lib/grading";
 import { mapWithConcurrency } from "@/lib/concurrency";
 import { toErrorMessage } from "@/lib/apiError";
 
-const CONCURRENCY = 5;
+const CONCURRENCY = 8;
+const DEFAULT_BATCH_SIZE = 40;
+const MAX_BATCH_SIZE = 100;
 
-// Grading loops over every student x question answer synchronously, which
-// can take a while for larger classes. Extend the serverless function
-// timeout accordingly (adjust for your Vercel plan's max).
-export const maxDuration = 300;
+// Each request grades one small batch and returns, so a single call always
+// finishes well within any Vercel plan's function timeout — the client
+// loops, calling again with the next offset until `done` comes back true.
+// This is what makes large rosters (hundreds of students) actually work:
+// grading everything in one request would always eventually time out.
+export const maxDuration = 60;
 
 export async function POST(
   req: NextRequest,
@@ -20,6 +24,14 @@ export async function POST(
   const body = await req.json().catch(() => ({}));
   const singleAnswerId =
     typeof body.answerId === "string" ? body.answerId : null;
+  const offset =
+    Number.isFinite(body.offset) && body.offset >= 0
+      ? Math.floor(body.offset)
+      : 0;
+  const limit =
+    Number.isFinite(body.limit) && body.limit > 0
+      ? Math.min(Math.floor(body.limit), MAX_BATCH_SIZE)
+      : DEFAULT_BATCH_SIZE;
 
   let settings, assignment;
   try {
@@ -34,8 +46,9 @@ export async function POST(
     assignment = await prisma.assignment.findUnique({
       where: { id },
       include: {
-        questions: true,
+        questions: { orderBy: { index: "asc" } },
         students: {
+          orderBy: { index: "asc" },
           include: { answers: { include: { question: true } } },
         },
       },
@@ -43,15 +56,6 @@ export async function POST(
 
     if (!assignment) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
-    }
-
-    // Re-grading a single cell shouldn't flip the whole assignment through
-    // a GRADING state or touch every other answer.
-    if (!singleAnswerId) {
-      await prisma.assignment.update({
-        where: { id },
-        data: { status: "GRADING" },
-      });
     }
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
@@ -119,22 +123,49 @@ export async function POST(
     }
   }
 
-  const answerJobs = assignment.students.flatMap((student) =>
-    student.answers.map((answer) => ({ student, answer }))
-  );
+  // Deterministic ordering across repeated batch calls: derive the job list
+  // from the already-index-ordered students/questions rather than trusting
+  // the raw `answers` array order, so offset-based paging can't skip or
+  // duplicate an answer between requests.
+  const questionById = new Map(assignment.questions.map((q) => [q.id, q]));
+  const answerJobs = assignment.students.flatMap((student) => {
+    const answerByQuestion = new Map(
+      student.answers.map((a) => [a.questionId, a])
+    );
+    return assignment.questions
+      .map((q) => {
+        const answer = answerByQuestion.get(q.id);
+        return answer ? { student, answer, question: questionById.get(q.id)! } : null;
+      })
+      .filter((j): j is NonNullable<typeof j> => j !== null);
+  });
+
+  const total = answerJobs.length;
+  const batch = answerJobs.slice(offset, offset + limit);
+
+  try {
+    if (offset === 0) {
+      await prisma.assignment.update({
+        where: { id },
+        data: { status: "GRADING" },
+      });
+    }
+  } catch (err) {
+    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  }
 
   const errors: string[] = [];
 
-  await mapWithConcurrency(answerJobs, CONCURRENCY, async ({ student, answer }) => {
+  await mapWithConcurrency(batch, CONCURRENCY, async ({ student, answer, question }) => {
     try {
       const result = await gradeAnswer({
         apiKey: settings.apiKey!,
         baseUrl: settings.baseUrl,
         model: settings.model,
         useMaxCompletionTokens: settings.useMaxCompletionTokens,
-        questionHeader: answer.question.header,
-        criteria: answer.question.criteria ?? "",
-        maxScore: answer.question.maxScore,
+        questionHeader: question.header,
+        criteria: question.criteria ?? "",
+        maxScore: question.maxScore,
         studentName: student.name,
         answerText: answer.text,
       });
@@ -144,13 +175,13 @@ export async function POST(
         create: {
           answerId: answer.id,
           score: result.score,
-          maxScore: answer.question.maxScore,
+          maxScore: question.maxScore,
           feedback: result.feedback,
           model: settings.model,
         },
         update: {
           score: result.score,
-          maxScore: answer.question.maxScore,
+          maxScore: question.maxScore,
           feedback: result.feedback,
           model: settings.model,
           gradedAt: new Date(),
@@ -158,30 +189,39 @@ export async function POST(
       });
     } catch (err) {
       errors.push(
-        `${student.name} / ${answer.question.header}: ${
+        `${student.name} / ${question.header}: ${
           err instanceof Error ? err.message : "unknown error"
         }`
       );
     }
   });
 
-  const allFailed = answerJobs.length > 0 && errors.length === answerJobs.length;
+  const done = offset + limit >= total;
 
-  try {
-    await prisma.assignment.update({
-      where: { id },
-      data: {
-        status: allFailed ? "READY_TO_GRADE" : "GRADED",
-        gradedAt: allFailed ? undefined : new Date(),
-      },
-    });
-  } catch (err) {
-    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  if (done) {
+    try {
+      const gradedCount = await prisma.grade.count({
+        where: { answer: { student: { assignmentId: id } } },
+      });
+      await prisma.assignment.update({
+        where: { id },
+        data: {
+          status: gradedCount > 0 ? "GRADED" : "READY_TO_GRADE",
+          gradedAt: gradedCount > 0 ? new Date() : undefined,
+        },
+      });
+    } catch (err) {
+      return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+    }
   }
 
   return NextResponse.json({
-    graded: answerJobs.length - errors.length,
-    total: answerJobs.length,
+    graded: batch.length - errors.length,
+    failed: errors.length,
     errors,
+    offset,
+    limit,
+    total,
+    done,
   });
 }

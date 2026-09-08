@@ -35,6 +35,19 @@ const STATUS_CLASS: Record<AssignmentSummary["status"], string> = {
   GRADED: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
 };
 
+// Matches the server's DEFAULT_BATCH_SIZE — each request grades one batch
+// and returns, so a run of hundreds of students never hits a single
+// serverless function's timeout; the client just keeps calling with the
+// next offset and reports live progress in between.
+const GRADE_BATCH_SIZE = 40;
+
+type GradingProgress = {
+  assignmentName: string;
+  graded: number;
+  failed: number;
+  total: number;
+};
+
 export default function HomePage() {
   const router = useRouter();
   const [assignments, setAssignments] = useState<AssignmentSummary[]>([]);
@@ -50,6 +63,8 @@ export default function HomePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [gradingId, setGradingId] = useState<string | null>(null);
+  const [gradingProgress, setGradingProgress] =
+    useState<GradingProgress | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -173,33 +188,66 @@ export default function HomePage() {
     }
   }
 
-  async function handleGrade(id: string) {
+  async function handleGrade(id: string, assignmentName: string) {
     setGradingId(id);
+
+    let offset = 0;
+    let gradedTotal = 0;
+    let failedTotal = 0;
+    let total = 0;
+    const allErrors: string[] = [];
+    setGradingProgress({ assignmentName, graded: 0, failed: 0, total: 0 });
+
     try {
-      const res = await fetch(`/api/assignments/${id}/grade`, {
-        method: "POST",
-      });
-      const data = await parseJsonResponse<{
-        graded: number;
-        total: number;
-        errors: string[];
-      }>(res);
+      // The server grades one bounded batch per request and reports back
+      // how many jobs exist in total; keep calling with the next offset
+      // until it says we're done. This is what lets a roster of hundreds
+      // of students grade without any single request timing out.
+      for (;;) {
+        const res = await fetch(`/api/assignments/${id}/grade`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ offset, limit: GRADE_BATCH_SIZE }),
+        });
+        const data = await parseJsonResponse<{
+          graded: number;
+          failed: number;
+          errors: string[];
+          offset: number;
+          limit: number;
+          total: number;
+          done: boolean;
+        }>(res);
+
+        gradedTotal += data.graded;
+        failedTotal += data.failed;
+        total = data.total;
+        allErrors.push(...data.errors);
+        setGradingProgress({
+          assignmentName,
+          graded: gradedTotal,
+          failed: failedTotal,
+          total,
+        });
+
+        if (data.done) break;
+        offset = data.offset + data.limit;
+      }
+
       await loadAssignments();
 
-      if (data.errors.length > 0) {
-        const preview = data.errors.slice(0, 5).join("\n");
+      if (allErrors.length > 0) {
+        const preview = allErrors.slice(0, 5).join("\n");
         const more =
-          data.errors.length > 5
-            ? `\n…and ${data.errors.length - 5} more`
-            : "";
+          allErrors.length > 5 ? `\n…and ${allErrors.length - 5} more` : "";
         alert(
-          `Graded ${data.graded} of ${data.total} answers. ${data.errors.length} failed:\n${preview}${more}`
+          `Graded ${gradedTotal} of ${total} answers. ${allErrors.length} failed:\n${preview}${more}`
         );
       }
 
       // Only jump to the grid if something actually got graded — otherwise
       // it's just a confusing wall of dashes.
-      if (data.graded > 0) {
+      if (gradedTotal > 0) {
         router.push(`/assignments/${id}/grid`);
       }
     } catch (err) {
@@ -207,6 +255,7 @@ export default function HomePage() {
       await loadAssignments();
     } finally {
       setGradingId(null);
+      setGradingProgress(null);
     }
   }
 
@@ -392,7 +441,7 @@ export default function HomePage() {
                           </Link>
                         )}
                         <button
-                          onClick={() => handleGrade(a.id)}
+                          onClick={() => handleGrade(a.id, a.name)}
                           disabled={gradingId === a.id || a.status === "GRADING"}
                           className="rounded bg-brand-crimson px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
                         >
@@ -411,6 +460,50 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      {gradingProgress && <GradingProgressModal progress={gradingProgress} />}
+    </div>
+  );
+}
+
+function GradingProgressModal({ progress }: { progress: GradingProgress }) {
+  const { assignmentName, graded, failed, total } = progress;
+  const done = graded + failed;
+  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-lg border border-neutral-200 bg-white p-6 shadow-lg dark:border-border dark:bg-surface">
+        <h3 className="text-base font-semibold text-neutral-900 dark:text-foreground">
+          Grading {assignmentName}
+        </h3>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-muted">
+          {total > 0
+            ? `${done} of ${total} answers processed…`
+            : "Starting…"}
+        </p>
+
+        <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-surface-muted">
+          <div
+            className="h-full rounded-full bg-brand-crimson transition-all duration-300 ease-out"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+
+        <div className="mt-2 flex items-center justify-between text-xs text-neutral-500 dark:text-muted">
+          <span>{pct}%</span>
+          {failed > 0 && (
+            <span className="text-red-600 dark:text-red-400">
+              {failed} failed
+            </span>
+          )}
+        </div>
+
+        <p className="mt-4 text-xs text-neutral-400 dark:text-muted">
+          This can take a while for large rosters — feel free to leave this
+          tab open, it&rsquo;ll finish in the background of your browser.
+        </p>
+      </div>
     </div>
   );
 }
