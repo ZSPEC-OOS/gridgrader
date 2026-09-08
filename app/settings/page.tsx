@@ -31,30 +31,39 @@ export default function SettingsPage() {
   const [pinError, setPinError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/settings");
-        const data = await parseJsonResponse<SettingsResponse>(res);
-        setModel(data.model);
-        setSavedModels(data.savedModels);
-        setBaseUrl(data.baseUrl ?? "");
-        setHasApiKey(data.hasApiKey);
-        setApiKeyPreview(data.apiKeyPreview);
-        setHasPin(data.hasPin);
-        setUnlocked(!data.hasPin);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load settings."
-        );
-      } finally {
-        setLoading(false);
-      }
+  async function load() {
+    setLoading(true);
+    setLoadFailed(false);
+    setError(null);
+    try {
+      const res = await fetch("/api/settings");
+      const data = await parseJsonResponse<SettingsResponse>(res);
+      setModel(data.model);
+      setSavedModels(data.savedModels);
+      setBaseUrl(data.baseUrl ?? "");
+      setHasApiKey(data.hasApiKey);
+      setApiKeyPreview(data.apiKeyPreview);
+      setHasPin(data.hasPin);
+      setUnlocked(!data.hasPin);
+    } catch (err) {
+      // Don't fall back to the locked or editable views on a failed load —
+      // we don't actually know hasPin, so guessing either way is wrong.
+      setLoadFailed(true);
+      setError(
+        err instanceof Error ? err.message : "Failed to load settings."
+      );
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- standard fetch-on-mount
     load();
   }, []);
 
@@ -132,6 +141,23 @@ export default function SettingsPage() {
     return (
       <div className="mx-auto max-w-xl px-6 py-10">
         <p className="text-sm text-neutral-500 dark:text-muted">Loading…</p>
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="mx-auto max-w-xl px-6 py-10">
+        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <div className="mt-6 rounded-lg border border-neutral-200 bg-white p-6 dark:border-border dark:bg-surface">
+          <p className="text-sm text-red-600">{error}</p>
+          <button
+            onClick={load}
+            className="mt-4 rounded bg-brand-ink px-4 py-2 text-sm font-medium text-white hover:bg-brand-maroon dark:bg-brand-crimson dark:hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
