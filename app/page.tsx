@@ -355,25 +355,33 @@ export default function HomePage() {
                         {STATUS_LABEL[a.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      {a.status === "GRADED" ? (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
                         <Link
-                          href={`/assignments/${a.id}/grid`}
-                          className="rounded bg-brand-ink px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-maroon dark:bg-brand-crimson dark:hover:opacity-90"
+                          href={`/assignments/${a.id}/edit`}
+                          className="rounded border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-brand-maroon hover:text-brand-maroon dark:border-border dark:text-foreground dark:hover:border-brand-crimson dark:hover:text-brand-crimson"
                         >
-                          View grid
+                          Edit
                         </Link>
-                      ) : (
-                        <button
-                          onClick={() => handleGrade(a.id)}
-                          disabled={gradingId === a.id || a.status === "GRADING"}
-                          className="rounded bg-brand-crimson px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
-                        >
-                          {gradingId === a.id || a.status === "GRADING"
-                            ? "Grading…"
-                            : "Grade"}
-                        </button>
-                      )}
+                        {a.status === "GRADED" ? (
+                          <Link
+                            href={`/assignments/${a.id}/grid`}
+                            className="rounded bg-brand-ink px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-maroon dark:bg-brand-crimson dark:hover:opacity-90"
+                          >
+                            View grid
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={() => handleGrade(a.id)}
+                            disabled={gradingId === a.id || a.status === "GRADING"}
+                            className="rounded bg-brand-crimson px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                          >
+                            {gradingId === a.id || a.status === "GRADING"
+                              ? "Grading…"
+                              : "Grade"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
