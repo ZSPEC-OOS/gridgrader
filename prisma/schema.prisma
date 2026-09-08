@@ -85,4 +85,5 @@ model Settings {
   savedModels String[] @default([])
   pinHash     String?
   useMaxCompletionTokens Boolean @default(false)
+  gradingTolerancePercent Int    @default(0)
 }

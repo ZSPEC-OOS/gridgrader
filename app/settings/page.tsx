@@ -11,15 +11,18 @@ type SettingsResponse = {
   savedModels: string[];
   hasPin: boolean;
   useMaxCompletionTokens: boolean;
+  gradingTolerancePercent: number;
 };
 
 const MIN_PIN_LENGTH = 4;
+const MAX_GRADING_TOLERANCE_PERCENT = 50;
 
 export default function SettingsPage() {
   const [model, setModel] = useState("gpt-4o-mini");
   const [savedModels, setSavedModels] = useState<string[]>([]);
   const [baseUrl, setBaseUrl] = useState("");
   const [useMaxCompletionTokens, setUseMaxCompletionTokens] = useState(false);
+  const [gradingTolerancePercent, setGradingTolerancePercent] = useState(0);
   const [apiKey, setApiKey] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
   const [apiKeyPreview, setApiKeyPreview] = useState<string | null>(null);
@@ -55,6 +58,7 @@ export default function SettingsPage() {
       setSavedModels(data.savedModels);
       setBaseUrl(data.baseUrl ?? "");
       setUseMaxCompletionTokens(data.useMaxCompletionTokens);
+      setGradingTolerancePercent(data.gradingTolerancePercent);
       setHasApiKey(data.hasApiKey);
       setApiKeyPreview(data.apiKeyPreview);
       setHasPin(data.hasPin);
@@ -151,6 +155,7 @@ export default function SettingsPage() {
           model,
           baseUrl,
           useMaxCompletionTokens,
+          gradingTolerancePercent,
           apiKey,
           newPin: hasPin ? undefined : newPin,
         }),
@@ -159,6 +164,7 @@ export default function SettingsPage() {
       setSavedModels(data.savedModels);
       setBaseUrl(data.baseUrl ?? "");
       setUseMaxCompletionTokens(data.useMaxCompletionTokens);
+      setGradingTolerancePercent(data.gradingTolerancePercent);
       setHasApiKey(data.hasApiKey);
       setApiKeyPreview(data.apiKeyPreview);
       setHasPin(data.hasPin);
@@ -241,6 +247,12 @@ export default function SettingsPage() {
               <dt className="text-neutral-500 dark:text-muted">API key</dt>
               <dd className="font-medium text-neutral-900 dark:text-foreground">
                 {hasApiKey ? apiKeyPreview : "Not set"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-neutral-500 dark:text-muted">Grading tolerance</dt>
+              <dd className="font-medium text-neutral-900 dark:text-foreground">
+                {gradingTolerancePercent}%
               </dd>
             </div>
           </dl>
@@ -360,6 +372,36 @@ export default function SettingsPage() {
               </span>
             </span>
           </label>
+
+          <div>
+            <div className="flex items-baseline justify-between">
+              <label
+                htmlFor="grading-tolerance"
+                className="block text-xs font-medium text-neutral-500 dark:text-muted"
+              >
+                Grading tolerance
+              </label>
+              <span className="text-sm font-medium text-neutral-900 dark:text-foreground">
+                {gradingTolerancePercent}%
+              </span>
+            </div>
+            <input
+              id="grading-tolerance"
+              type="range"
+              min={0}
+              max={MAX_GRADING_TOLERANCE_PERCENT}
+              step={1}
+              value={gradingTolerancePercent}
+              onChange={(e) => setGradingTolerancePercent(Number(e.target.value))}
+              className="mt-2 w-full accent-brand-ink dark:accent-brand-crimson"
+            />
+            <p className="mt-1 text-xs text-neutral-500 dark:text-muted">
+              Adds a cushion to grading: an answer scoring within this
+              percentage of full credit is rounded up to full credit, so
+              minor deductions don&apos;t make grading feel overly strict. 0%
+              applies no cushion.
+            </p>
+          </div>
 
           <div>
             <label className="block text-xs font-medium text-neutral-500 dark:text-muted">
