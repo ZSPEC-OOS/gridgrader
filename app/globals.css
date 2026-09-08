@@ -3,11 +3,19 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* GridGrader brand palette, sampled from the logo mark */
+  --brand-ink: #000000;
+  --brand-maroon: #69000f;
+  --brand-crimson: #bc0013;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-maroon: var(--brand-maroon);
+  --color-brand-crimson: var(--brand-crimson);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

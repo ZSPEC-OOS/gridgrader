@@ -39,7 +39,7 @@ export default async function GridPage({
               ` · graded ${new Date(assignment.gradedAt).toLocaleString()}`}
           </p>
         </div>
-        <Link href="/" className="text-sm text-neutral-600 hover:text-neutral-900">
+        <Link href="/" className="text-sm text-neutral-600 hover:text-brand-maroon">
           ← Back to Grading
         </Link>
       </div>

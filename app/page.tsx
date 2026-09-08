@@ -30,8 +30,8 @@ const STATUS_LABEL: Record<AssignmentSummary["status"], string> = {
 
 const STATUS_CLASS: Record<AssignmentSummary["status"], string> = {
   CRITERIA_PENDING: "bg-amber-100 text-amber-800",
-  READY_TO_GRADE: "bg-blue-100 text-blue-800",
-  GRADING: "bg-blue-100 text-blue-800 animate-pulse",
+  READY_TO_GRADE: "bg-brand-crimson/10 text-brand-crimson",
+  GRADING: "bg-brand-crimson/10 text-brand-crimson animate-pulse",
   GRADED: "bg-green-100 text-green-800",
 };
 
@@ -311,7 +311,7 @@ export default function HomePage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded bg-neutral-900 px-5 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
+                className="rounded bg-brand-ink px-5 py-2 text-sm font-medium text-white hover:bg-brand-maroon disabled:opacity-50"
               >
                 {saving ? "Saving…" : "Save"}
               </button>
@@ -359,7 +359,7 @@ export default function HomePage() {
                       {a.status === "GRADED" ? (
                         <Link
                           href={`/assignments/${a.id}/grid`}
-                          className="rounded bg-neutral-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-neutral-700"
+                          className="rounded bg-brand-ink px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-maroon"
                         >
                           View grid
                         </Link>
@@ -367,7 +367,7 @@ export default function HomePage() {
                         <button
                           onClick={() => handleGrade(a.id)}
                           disabled={gradingId === a.id || a.status === "GRADING"}
-                          className="rounded bg-blue-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+                          className="rounded bg-brand-crimson px-4 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
                         >
                           {gradingId === a.id || a.status === "GRADING"
                             ? "Grading…"
