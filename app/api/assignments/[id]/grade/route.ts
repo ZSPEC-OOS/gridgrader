@@ -79,7 +79,6 @@ export async function POST(
         questionHeader: job.answer.question.header,
         criteria: job.answer.question.criteria ?? "",
         maxScore: job.answer.question.maxScore,
-        studentName: job.student.name,
         answerText: job.answer.text,
       });
 
@@ -166,7 +165,6 @@ export async function POST(
         questionHeader: question.header,
         criteria: question.criteria ?? "",
         maxScore: question.maxScore,
-        studentName: student.name,
         answerText: answer.text,
       });
 
