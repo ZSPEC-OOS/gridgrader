@@ -32,29 +32,29 @@ export default async function GridPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             {assignment.name}
           </h1>
-          <p className="mt-1 text-sm text-neutral-600">
+          <p className="mt-1 text-sm text-neutral-600 dark:text-muted">
             {assignment.students.length} students ·{" "}
             {assignment.questions.length} questions
             {assignment.gradedAt &&
               ` · graded ${new Date(assignment.gradedAt).toLocaleString()}`}
           </p>
         </div>
-        <Link href="/" className="text-sm text-neutral-600 hover:text-brand-maroon">
+        <Link href="/" className="text-sm text-neutral-600 hover:text-brand-maroon dark:text-muted dark:hover:text-brand-crimson">
           ← Back to Grading
         </Link>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+      <div className="mt-6 overflow-x-auto rounded-lg border border-neutral-200 bg-white dark:border-border dark:bg-surface">
         <table className="w-full min-w-max border-collapse text-sm">
           <thead>
-            <tr className="bg-neutral-50 text-left text-xs uppercase text-neutral-500">
-              <th className="sticky left-0 z-10 bg-neutral-50 px-4 py-3">
+            <tr className="bg-neutral-50 text-left text-xs uppercase text-neutral-500 dark:bg-surface-muted dark:text-muted">
+              <th className="sticky left-0 z-10 bg-neutral-50 px-4 py-3 dark:bg-surface-muted">
                 Student
               </th>
               {assignment.questions.map((q) => (
                 <th key={q.id} className="px-4 py-3 whitespace-nowrap">
                   {q.header}
-                  <span className="ml-1 font-normal normal-case text-neutral-400">
+                  <span className="ml-1 font-normal normal-case text-neutral-400 dark:text-muted">
                     ({q.maxScore} pts)
                   </span>
                 </th>
@@ -62,7 +62,7 @@ export default async function GridPage({
               <th className="px-4 py-3 whitespace-nowrap">Total</th>
             </tr>
           </thead>
-          <tbody className="text-neutral-900">
+          <tbody className="text-neutral-900 dark:text-foreground">
             {assignment.students.map((student) => {
               const answerByQuestion = new Map(
                 student.answers.map((a) => [a.questionId, a])
@@ -74,8 +74,8 @@ export default async function GridPage({
               const anyGraded = student.answers.some((a) => a.grade);
 
               return (
-                <tr key={student.id} className="border-t border-neutral-100">
-                  <td className="sticky left-0 z-10 bg-white px-4 py-2 font-medium">
+                <tr key={student.id} className="border-t border-neutral-100 dark:border-border">
+                  <td className="sticky left-0 z-10 bg-white px-4 py-2 font-medium dark:bg-surface">
                     {student.name}
                   </td>
                   {assignment.questions.map((q) => {

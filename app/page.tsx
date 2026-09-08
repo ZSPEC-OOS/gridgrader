@@ -29,10 +29,10 @@ const STATUS_LABEL: Record<AssignmentSummary["status"], string> = {
 };
 
 const STATUS_CLASS: Record<AssignmentSummary["status"], string> = {
-  CRITERIA_PENDING: "bg-amber-100 text-amber-800",
+  CRITERIA_PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   READY_TO_GRADE: "bg-brand-crimson/10 text-brand-crimson",
   GRADING: "bg-brand-crimson/10 text-brand-crimson animate-pulse",
-  GRADED: "bg-green-100 text-green-800",
+  GRADED: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
 };
 
 export default function HomePage() {
@@ -194,7 +194,7 @@ export default function HomePage() {
     <div className="mx-auto max-w-6xl px-6 py-10 space-y-10">
       <section>
         <h1 className="text-2xl font-semibold tracking-tight">Grading</h1>
-        <p className="mt-1 text-sm text-neutral-600">
+        <p className="mt-1 text-sm text-neutral-600 dark:text-muted">
           Drop a spreadsheet of student responses to get started. The first
           column should hold student names, and each column after it is one
           question.
@@ -211,14 +211,14 @@ export default function HomePage() {
             onClick={() => fileInputRef.current?.click()}
             className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-14 text-center transition ${
               dragActive
-                ? "border-blue-400 bg-blue-50"
-                : "border-neutral-300 bg-white hover:border-neutral-400"
+                ? "border-brand-crimson bg-brand-crimson/5"
+                : "border-neutral-300 bg-white hover:border-neutral-400 dark:border-border dark:bg-surface dark:hover:border-muted"
             }`}
           >
-            <p className="text-sm font-medium text-neutral-700">
+            <p className="text-sm font-medium text-neutral-700 dark:text-foreground">
               Drag & drop a .xlsx / .csv file here, or click to choose one
             </p>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-neutral-500 dark:text-muted">
               Column A = student name, columns B+ = one per question
             </p>
             <input
@@ -239,27 +239,27 @@ export default function HomePage() {
         )}
 
         {draftQuestions && (
-          <div className="mt-6 rounded-lg border border-neutral-200 bg-white p-6">
+          <div className="mt-6 rounded-lg border border-neutral-200 bg-white p-6 dark:border-border dark:bg-surface">
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
-                <label className="block text-xs font-medium text-neutral-500">
+                <label className="block text-xs font-medium text-neutral-500 dark:text-muted">
                   Assignment name
                 </label>
                 <input
                   value={assignmentName}
                   onChange={(e) => setAssignmentName(e.target.value)}
-                  className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
+                  className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
                 />
               </div>
               <button
                 onClick={resetUpload}
-                className="text-sm text-neutral-500 hover:text-neutral-800"
+                className="text-sm text-neutral-500 hover:text-neutral-800 dark:text-muted dark:hover:text-foreground"
               >
                 Cancel
               </button>
             </div>
 
-            <p className="mt-4 text-sm text-neutral-600">
+            <p className="mt-4 text-sm text-neutral-600 dark:text-muted">
               Found <strong>{draftQuestions.length}</strong> question
               {draftQuestions.length === 1 ? "" : "s"}. Paste grading
               criteria (the answer key / rubric) for each below.
@@ -269,13 +269,13 @@ export default function HomePage() {
               {draftQuestions.map((q, i) => (
                 <div
                   key={i}
-                  className="rounded-md border border-neutral-200 p-4"
+                  className="rounded-md border border-neutral-200 p-4 dark:border-border"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-neutral-900">
+                    <span className="text-sm font-semibold text-neutral-900 dark:text-foreground">
                       {q.header}
                     </span>
-                    <label className="flex items-center gap-1 text-xs text-neutral-500">
+                    <label className="flex items-center gap-1 text-xs text-neutral-500 dark:text-muted">
                       Points
                       <input
                         type="number"
@@ -286,7 +286,7 @@ export default function HomePage() {
                             maxScore: Number(e.target.value) || 1,
                           })
                         }
-                        className="w-16 rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900"
+                        className="w-16 rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
                       />
                     </label>
                   </div>
@@ -297,7 +297,7 @@ export default function HomePage() {
                     }
                     placeholder="Paste the grading criteria / answer key for this question..."
                     rows={5}
-                    className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400"
+                    className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 dark:border-border dark:bg-surface-muted dark:text-foreground dark:placeholder:text-muted"
                   />
                 </div>
               ))}
@@ -311,7 +311,7 @@ export default function HomePage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded bg-brand-ink px-5 py-2 text-sm font-medium text-white hover:bg-brand-maroon disabled:opacity-50"
+                className="rounded bg-brand-ink px-5 py-2 text-sm font-medium text-white hover:bg-brand-maroon disabled:opacity-50 dark:bg-brand-crimson dark:hover:opacity-90"
               >
                 {saving ? "Saving…" : "Save"}
               </button>
@@ -322,18 +322,18 @@ export default function HomePage() {
 
       <section>
         <h2 className="text-lg font-semibold tracking-tight">Assignments</h2>
-        <div className="mt-4 overflow-hidden rounded-lg border border-neutral-200 bg-white">
+        <div className="mt-4 overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-border dark:bg-surface">
           {loadingList ? (
-            <p className="p-6 text-sm text-neutral-500">Loading…</p>
+            <p className="p-6 text-sm text-neutral-500 dark:text-muted">Loading…</p>
           ) : listError ? (
             <p className="p-6 text-sm text-red-600">{listError}</p>
           ) : assignments.length === 0 ? (
-            <p className="p-6 text-sm text-neutral-500">
+            <p className="p-6 text-sm text-neutral-500 dark:text-muted">
               No assignments yet. Upload a file above to create one.
             </p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-500">
+              <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-500 dark:bg-surface-muted dark:text-muted">
                 <tr>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Students</th>
@@ -342,9 +342,9 @@ export default function HomePage() {
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="text-neutral-900">
+              <tbody className="text-neutral-900 dark:text-foreground">
                 {assignments.map((a) => (
-                  <tr key={a.id} className="border-t border-neutral-100">
+                  <tr key={a.id} className="border-t border-neutral-100 dark:border-border">
                     <td className="px-4 py-3 font-medium">{a.name}</td>
                     <td className="px-4 py-3">{a.studentCount}</td>
                     <td className="px-4 py-3">{a.questionCount}</td>
@@ -359,7 +359,7 @@ export default function HomePage() {
                       {a.status === "GRADED" ? (
                         <Link
                           href={`/assignments/${a.id}/grid`}
-                          className="rounded bg-brand-ink px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-maroon"
+                          className="rounded bg-brand-ink px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-maroon dark:bg-brand-crimson dark:hover:opacity-90"
                         >
                           View grid
                         </Link>

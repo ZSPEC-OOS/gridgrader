@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
+/* Manual light/dark theming driven by a data-theme attribute on <html>,
+   not by the OS's prefers-color-scheme — see ThemeToggle. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #ffffff;
+  --surface-muted: #fafafa;
+  --border: #e5e5e5;
+  --muted: #737373;
 
   /* GridGrader brand palette, sampled from the logo mark */
   --brand-ink: #000000;
@@ -10,9 +18,29 @@
   --brand-crimson: #bc0013;
 }
 
+:root[data-theme="dark"] {
+  /* Dark theme built from the logo's deep reds/black rather than plain gray. */
+  --background: #150708;
+  --foreground: #f3e6e7;
+  --surface: #1f0d10;
+  --surface-muted: #2a1215;
+  --border: #46181d;
+  --muted: #b98a90;
+
+  /* brand-ink stays true black — components that use it for primary
+     buttons switch to brand-crimson/brand-maroon explicitly via dark:
+     variants instead, since black-on-near-black has no contrast. */
+  --brand-maroon: #c23a52;
+  --brand-crimson: #ff3a5a;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
   --color-brand-ink: var(--brand-ink);
   --color-brand-maroon: var(--brand-maroon);
   --color-brand-crimson: var(--brand-crimson);
@@ -20,10 +48,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* GridGrader is a light, professional theme regardless of OS/browser
-   dark-mode preference — deliberately no prefers-color-scheme override. */
 html {
   color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {

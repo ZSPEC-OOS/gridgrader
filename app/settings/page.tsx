@@ -71,7 +71,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-xl px-6 py-10">
-        <p className="text-sm text-neutral-500">Loading…</p>
+        <p className="text-sm text-neutral-500 dark:text-muted">Loading…</p>
       </div>
     );
   }
@@ -79,46 +79,47 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-xl px-6 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-      <p className="mt-1 text-sm text-neutral-600">
+      <p className="mt-1 text-sm text-neutral-600 dark:text-muted">
         Configure the AI model used to grade submissions.
       </p>
 
-      <div className="mt-6 space-y-5 rounded-lg border border-neutral-200 bg-white p-6">
+      <div className="mt-6 space-y-5 rounded-lg border border-neutral-200 bg-white p-6 dark:border-border dark:bg-surface">
         <div>
-          <label className="block text-xs font-medium text-neutral-500">
+          <label className="block text-xs font-medium text-neutral-500 dark:text-muted">
             Provider
           </label>
           <select
             disabled
             value="openai"
-            className="mt-1 w-full rounded border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm text-neutral-600"
+            className="mt-1 w-full rounded border border-neutral-300 bg-neutral-50 px-3 py-2 text-sm text-neutral-600 dark:border-border dark:bg-surface-muted dark:text-muted"
           >
             <option value="openai">OpenAI</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-neutral-500">
+          <label className="block text-xs font-medium text-neutral-500 dark:text-muted">
             Model
           </label>
-          <select
+          <input
+            list="model-options"
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900"
-          >
+            placeholder="e.g. gpt-4o-mini"
+            className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
+          />
+          <datalist id="model-options">
             {MODEL_OPTIONS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
+              <option key={m} value={m} />
             ))}
-            {!MODEL_OPTIONS.includes(model) && (
-              <option value={model}>{model}</option>
-            )}
-          </select>
+          </datalist>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-muted">
+            Type any model name, or pick one of the suggestions.
+          </p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-neutral-500">
+          <label className="block text-xs font-medium text-neutral-500 dark:text-muted">
             API key
           </label>
           <input
@@ -126,9 +127,9 @@ export default function SettingsPage() {
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder={hasApiKey ? apiKeyPreview ?? "" : "sk-..."}
-            className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400"
+            className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 dark:border-border dark:bg-surface-muted dark:text-foreground dark:placeholder:text-muted"
           />
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="mt-1 text-xs text-neutral-500 dark:text-muted">
             {hasApiKey
               ? "A key is already saved. Leave blank to keep it."
               : "No key saved yet."}
@@ -137,14 +138,14 @@ export default function SettingsPage() {
 
         {error && <p className="text-sm text-red-600">{error}</p>}
         {saved && (
-          <p className="text-sm text-green-600">Settings saved.</p>
+          <p className="text-sm text-green-600 dark:text-green-400">Settings saved.</p>
         )}
 
         <div className="flex justify-end">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded bg-brand-ink px-5 py-2 text-sm font-medium text-white hover:bg-brand-maroon disabled:opacity-50"
+            className="rounded bg-brand-ink px-5 py-2 text-sm font-medium text-white hover:bg-brand-maroon disabled:opacity-50 dark:bg-brand-crimson dark:hover:opacity-90"
           >
             {saving ? "Saving…" : "Save"}
           </button>
