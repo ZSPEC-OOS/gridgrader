@@ -5,6 +5,7 @@ import { hashPin } from "@/lib/pin";
 
 const SETTINGS_ID = 1;
 const MIN_PIN_LENGTH = 4;
+const MAX_GRADING_TOLERANCE_PERCENT = 50;
 
 export async function GET() {
   try {
@@ -22,6 +23,7 @@ export async function GET() {
         savedModels: [],
         hasPin: false,
         useMaxCompletionTokens: false,
+        gradingTolerancePercent: 0,
       });
     }
 
@@ -36,6 +38,7 @@ export async function GET() {
       savedModels: settings.savedModels,
       hasPin: Boolean(settings.pinHash),
       useMaxCompletionTokens: settings.useMaxCompletionTokens,
+      gradingTolerancePercent: settings.gradingTolerancePercent,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
@@ -53,6 +56,9 @@ export async function POST(req: NextRequest) {
     typeof body.baseUrl === "string" ? body.baseUrl.trim() : "";
   const newPin = typeof body.newPin === "string" ? body.newPin.trim() : "";
   const useMaxCompletionTokens = Boolean(body.useMaxCompletionTokens);
+  const gradingTolerancePercent = Number.isFinite(body.gradingTolerancePercent)
+    ? Math.round(body.gradingTolerancePercent)
+    : 0;
 
   if (baseUrlInput) {
     try {
@@ -63,6 +69,18 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+  }
+
+  if (
+    gradingTolerancePercent < 0 ||
+    gradingTolerancePercent > MAX_GRADING_TOLERANCE_PERCENT
+  ) {
+    return NextResponse.json(
+      {
+        error: `Grading tolerance must be between 0 and ${MAX_GRADING_TOLERANCE_PERCENT}%.`,
+      },
+      { status: 400 }
+    );
   }
 
   try {
@@ -99,6 +117,7 @@ export async function POST(req: NextRequest) {
         savedModels,
         pinHash,
         useMaxCompletionTokens,
+        gradingTolerancePercent,
       },
       update: {
         provider,
@@ -110,6 +129,7 @@ export async function POST(req: NextRequest) {
         savedModels,
         pinHash,
         useMaxCompletionTokens,
+        gradingTolerancePercent,
       },
     });
 
@@ -124,6 +144,7 @@ export async function POST(req: NextRequest) {
       savedModels: settings.savedModels,
       hasPin: Boolean(settings.pinHash),
       useMaxCompletionTokens: settings.useMaxCompletionTokens,
+      gradingTolerancePercent: settings.gradingTolerancePercent,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });

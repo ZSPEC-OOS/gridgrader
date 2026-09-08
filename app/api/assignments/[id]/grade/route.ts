@@ -80,6 +80,7 @@ export async function POST(
         criteria: job.answer.question.criteria ?? "",
         maxScore: job.answer.question.maxScore,
         answerText: job.answer.text,
+        gradingTolerancePercent: settings.gradingTolerancePercent,
       });
 
       const grade = await prisma.grade.upsert({
@@ -166,6 +167,7 @@ export async function POST(
         criteria: question.criteria ?? "",
         maxScore: question.maxScore,
         answerText: answer.text,
+        gradingTolerancePercent: settings.gradingTolerancePercent,
       });
 
       await prisma.grade.upsert({

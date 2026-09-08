@@ -15,6 +15,10 @@ export async function gradeAnswer(params: {
   criteria: string;
   maxScore: number;
   answerText: string;
+  // Cushion, as a percentage of maxScore, below full credit that still
+  // rounds up to full credit — e.g. 10 means a 92%-scored answer becomes
+  // 100%. Guards against overly strict grading on near-correct answers.
+  gradingTolerancePercent?: number;
 }): Promise<GradeResult> {
   // Grading is deliberately name-blind — the caller has a student name
   // available, but it's never passed here or referenced in the prompt, so
@@ -28,6 +32,7 @@ export async function gradeAnswer(params: {
     criteria,
     maxScore,
     answerText,
+    gradingTolerancePercent = 0,
   } = params;
 
   const client = new OpenAI({
@@ -82,8 +87,19 @@ export async function gradeAnswer(params: {
   const feedback =
     typeof parsed.feedback === "string" ? parsed.feedback : "";
 
+  const clamped = Math.min(Math.max(score, 0), maxScore);
+
+  // Apply the tolerance cushion: an answer scoring within the configured
+  // percentage of full credit rounds up to maxScore, rather than being
+  // held to the model's exact strict score.
+  const cushionThreshold = maxScore * (1 - gradingTolerancePercent / 100);
+  const finalScore =
+    gradingTolerancePercent > 0 && clamped >= cushionThreshold
+      ? maxScore
+      : clamped;
+
   return {
-    score: Math.min(Math.max(score, 0), maxScore),
+    score: finalScore,
     feedback,
   };
 }
