@@ -43,11 +43,13 @@ export async function gradeAnswer(params: {
     answerText || "(no answer provided)",
   ].join("\n");
 
-  // Newer models (the GPT-5/o-series reasoning family) reject the legacy
-  // `max_tokens` param and require `max_completion_tokens` instead.
-  const tokenLimitField = useMaxCompletionTokens
+  // Reasoning models (the GPT-5/o-series family) lock down several
+  // chat-completion params at once: they reject the legacy `max_tokens`
+  // (need `max_completion_tokens` instead) and reject any `temperature`
+  // other than the default, so omit it entirely rather than send 0.
+  const reasoningModelFields = useMaxCompletionTokens
     ? { max_completion_tokens: 500 }
-    : { max_tokens: 500 };
+    : { max_tokens: 500, temperature: 0 };
 
   const response = await client.chat.completions.create({
     model,
@@ -56,8 +58,7 @@ export async function gradeAnswer(params: {
       { role: "user", content: user },
     ],
     response_format: { type: "json_object" },
-    temperature: 0,
-    ...tokenLimitField,
+    ...reasoningModelFields,
   });
 
   const raw = response.choices[0]?.message?.content ?? "{}";

@@ -232,9 +232,9 @@ export default function SettingsPage() {
               <dd className="font-medium text-neutral-900 dark:text-foreground">{model}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-neutral-500 dark:text-muted">Token parameter</dt>
+              <dt className="text-neutral-500 dark:text-muted">Reasoning model mode</dt>
               <dd className="font-medium text-neutral-900 dark:text-foreground">
-                {useMaxCompletionTokens ? "max_completion_tokens" : "max_tokens"}
+                {useMaxCompletionTokens ? "On" : "Off"}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -350,12 +350,13 @@ export default function SettingsPage() {
               className="mt-0.5"
             />
             <span>
-              This model requires{" "}
-              <code className="text-xs">max_completion_tokens</code> instead
-              of <code className="text-xs">max_tokens</code>
+              This is a reasoning model (GPT-5 / o-series)
               <span className="block text-xs text-neutral-500 dark:text-muted">
-                Needed for newer reasoning models (GPT-5 / o-series) — OpenAI
-                rejects the older parameter name for those.
+                These models reject several standard parameters — this uses{" "}
+                <code className="text-xs">max_completion_tokens</code> instead
+                of <code className="text-xs">max_tokens</code>, and skips
+                setting a custom temperature (only the model&apos;s default
+                is supported).
               </span>
             </span>
           </label>
