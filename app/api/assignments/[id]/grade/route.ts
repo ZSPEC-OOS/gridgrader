@@ -12,10 +12,14 @@ const CONCURRENCY = 5;
 export const maxDuration = 300;
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  const body = await req.json().catch(() => ({}));
+  const singleAnswerId =
+    typeof body.answerId === "string" ? body.answerId : null;
 
   let settings, assignment;
   try {
@@ -41,12 +45,78 @@ export async function POST(
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
 
-    await prisma.assignment.update({
-      where: { id },
-      data: { status: "GRADING" },
-    });
+    // Re-grading a single cell shouldn't flip the whole assignment through
+    // a GRADING state or touch every other answer.
+    if (!singleAnswerId) {
+      await prisma.assignment.update({
+        where: { id },
+        data: { status: "GRADING" },
+      });
+    }
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  }
+
+  if (singleAnswerId) {
+    const job = assignment.students
+      .flatMap((student) => student.answers.map((answer) => ({ student, answer })))
+      .find(({ answer }) => answer.id === singleAnswerId);
+
+    if (!job) {
+      return NextResponse.json({ error: "Answer not found." }, { status: 404 });
+    }
+
+    try {
+      const result = await gradeAnswer({
+        apiKey: settings.apiKey!,
+        baseUrl: settings.baseUrl,
+        model: settings.model,
+        useMaxCompletionTokens: settings.useMaxCompletionTokens,
+        questionHeader: job.answer.question.header,
+        criteria: job.answer.question.criteria ?? "",
+        maxScore: job.answer.question.maxScore,
+        studentName: job.student.name,
+        answerText: job.answer.text,
+      });
+
+      const grade = await prisma.grade.upsert({
+        where: { answerId: job.answer.id },
+        create: {
+          answerId: job.answer.id,
+          score: result.score,
+          maxScore: job.answer.question.maxScore,
+          feedback: result.feedback,
+          model: settings.model,
+        },
+        update: {
+          score: result.score,
+          maxScore: job.answer.question.maxScore,
+          feedback: result.feedback,
+          model: settings.model,
+          gradedAt: new Date(),
+        },
+      });
+
+      // Make sure the assignment shows as graded if this was the first
+      // successful grade it's ever gotten.
+      if (assignment.status !== "GRADED") {
+        await prisma.assignment.update({
+          where: { id },
+          data: { status: "GRADED", gradedAt: new Date() },
+        });
+      }
+
+      return NextResponse.json({
+        answerId: job.answer.id,
+        score: grade.score,
+        feedback: grade.feedback,
+      });
+    } catch (err) {
+      return NextResponse.json(
+        { error: toErrorMessage(err) },
+        { status: 500 }
+      );
+    }
   }
 
   const answerJobs = assignment.students.flatMap((student) =>
