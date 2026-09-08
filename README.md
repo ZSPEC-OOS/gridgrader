@@ -61,7 +61,10 @@ move grading to a background job — it is currently a synchronous request.
 
 ## Known limitations (MVP)
 
-- No authentication yet — this is a single-user tool for now.
+- No real authentication yet. Settings has a PIN lock (set on first save;
+  required to re-open the form for editing afterwards), but it's a UI-level
+  guard — a hashed PIN, checked by a server endpoint — not an auth system.
+  It stops casual browser access, not a direct API call.
 - The OpenAI API key is stored in plaintext in the `Settings` table. Add
   auth and/or at-rest encryption before exposing this beyond trusted local
   use.

@@ -59,6 +59,7 @@ export async function POST(
     try {
       const result = await gradeAnswer({
         apiKey: settings.apiKey!,
+        baseUrl: settings.baseUrl,
         model: settings.model,
         questionHeader: answer.question.header,
         criteria: answer.question.criteria ?? "",

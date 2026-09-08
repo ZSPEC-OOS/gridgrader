@@ -7,6 +7,7 @@ export type GradeResult = {
 
 export async function gradeAnswer(params: {
   apiKey: string;
+  baseUrl?: string | null;
   model: string;
   questionHeader: string;
   criteria: string;
@@ -14,10 +15,13 @@ export async function gradeAnswer(params: {
   studentName: string;
   answerText: string;
 }): Promise<GradeResult> {
-  const { apiKey, model, questionHeader, criteria, maxScore, answerText } =
+  const { apiKey, baseUrl, model, questionHeader, criteria, maxScore, answerText } =
     params;
 
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({
+    apiKey,
+    baseURL: baseUrl || undefined,
+  });
 
   const system = `You are a strict but fair grading assistant. You grade one student's answer to one question against grading criteria provided by the instructor. Always respond with a single JSON object of the form {"score": number, "feedback": string}. "score" must be a number between 0 and ${maxScore} (may be fractional). "feedback" must be one or two concise sentences explaining the score, referencing the criteria.`;
 

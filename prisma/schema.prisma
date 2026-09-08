@@ -80,6 +80,8 @@ model Settings {
   id          Int      @id @default(1)
   provider    String   @default("openai")
   apiKey      String?
+  baseUrl     String?
   model       String   @default("gpt-4o-mini")
   savedModels String[] @default([])
+  pinHash     String?
 }

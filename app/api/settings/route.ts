@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { toErrorMessage } from "@/lib/apiError";
+import { hashPin } from "@/lib/pin";
 
 const SETTINGS_ID = 1;
+const MIN_PIN_LENGTH = 4;
 
 export async function GET() {
   try {
@@ -14,20 +16,24 @@ export async function GET() {
       return NextResponse.json({
         provider: "openai",
         model: "gpt-4o-mini",
+        baseUrl: null,
         hasApiKey: false,
         apiKeyPreview: null,
         savedModels: [],
+        hasPin: false,
       });
     }
 
     return NextResponse.json({
       provider: settings.provider,
       model: settings.model,
+      baseUrl: settings.baseUrl,
       hasApiKey: Boolean(settings.apiKey),
       apiKeyPreview: settings.apiKey
         ? `sk-...${settings.apiKey.slice(-4)}`
         : null,
       savedModels: settings.savedModels,
+      hasPin: Boolean(settings.pinHash),
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
@@ -41,11 +47,39 @@ export async function POST(req: NextRequest) {
     ? body.model.trim()
     : "gpt-4o-mini";
   const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
+  const baseUrlInput =
+    typeof body.baseUrl === "string" ? body.baseUrl.trim() : "";
+  const newPin = typeof body.newPin === "string" ? body.newPin.trim() : "";
+
+  if (baseUrlInput) {
+    try {
+      new URL(baseUrlInput);
+    } catch {
+      return NextResponse.json(
+        { error: "Base URL is not a valid URL." },
+        { status: 400 }
+      );
+    }
+  }
 
   try {
     const existing = await prisma.settings.findUnique({
       where: { id: SETTINGS_ID },
     });
+
+    // A PIN is only ever created once, on the first save, and never
+    // overwritten by this endpoint afterwards — changing it isn't
+    // supported yet.
+    let pinHash = existing?.pinHash ?? null;
+    if (!pinHash) {
+      if (newPin.length < MIN_PIN_LENGTH) {
+        return NextResponse.json(
+          { error: `Choose a PIN of at least ${MIN_PIN_LENGTH} digits.` },
+          { status: 400 }
+        );
+      }
+      pinHash = hashPin(newPin);
+    }
 
     const savedModels = Array.from(
       new Set([...(existing?.savedModels ?? []), model])
@@ -58,7 +92,9 @@ export async function POST(req: NextRequest) {
         provider,
         model,
         apiKey: apiKey || null,
+        baseUrl: baseUrlInput || null,
         savedModels,
+        pinHash,
       },
       update: {
         provider,
@@ -66,18 +102,22 @@ export async function POST(req: NextRequest) {
         // Only overwrite the stored key if a new one was actually submitted,
         // so re-saving the model choice doesn't clobber the existing key.
         apiKey: apiKey ? apiKey : existing?.apiKey,
+        baseUrl: baseUrlInput || null,
         savedModels,
+        pinHash,
       },
     });
 
     return NextResponse.json({
       provider: settings.provider,
       model: settings.model,
+      baseUrl: settings.baseUrl,
       hasApiKey: Boolean(settings.apiKey),
       apiKeyPreview: settings.apiKey
         ? `sk-...${settings.apiKey.slice(-4)}`
         : null,
       savedModels: settings.savedModels,
+      hasPin: Boolean(settings.pinHash),
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
