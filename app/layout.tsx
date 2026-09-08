@@ -35,16 +35,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Image
                 src="/logo-full.png"
                 alt="GridGrader"
-                width={1136}
-                height={281}
+                width={1691}
+                height={242}
                 priority
                 className="h-8 w-auto dark:hidden"
               />
               <Image
                 src="/logo-full-dark.png"
                 alt="GridGrader"
-                width={1136}
-                height={281}
+                width={1691}
+                height={242}
                 priority
                 className="hidden h-8 w-auto dark:block"
               />
