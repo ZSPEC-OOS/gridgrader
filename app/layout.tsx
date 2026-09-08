@@ -53,6 +53,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/" className="hover:text-brand-maroon dark:hover:text-brand-crimson">
                 Grading
               </Link>
+              <Link href="/grading-prep" className="hover:text-brand-maroon dark:hover:text-brand-crimson">
+                Grading Prep
+              </Link>
               <Link href="/settings" className="hover:text-brand-maroon dark:hover:text-brand-crimson">
                 Settings
               </Link>
