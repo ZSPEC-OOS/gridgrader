@@ -2,24 +2,30 @@
 // rule behind one small interface, per the design doc's explicit
 // instruction: "Do not scatter selectors through popup or storage code."
 //
+// This adapter covers the score-entry iframe's document. The top-frame
+// student-navigation controls (prev/next student) are a *different*
+// document in a *different* frame — see canvas-navigator.js for that.
+//
 // CanvasAdapter contract (documented in JS since there's no TS here):
 //   isCompatiblePage(): boolean
 //   getDisplayedStudentName(): string | null
 //   getQuestionTargets(): Array<{ index: number, input: HTMLInputElement, maxScore: number | null }>
 //   setScore(input: HTMLInputElement, value: number): void
+//   hasUpdateScoresButton(): boolean
+//   clickUpdateScores(): boolean
 //
 // ---------------------------------------------------------------------
 // STATUS: implemented against confirmed real markup from ONE Canvas
 // Classic Quizzes SpeedGrader page (webcampus.unr.edu, essay-type
 // questions). Still open before trusting this on a real roster:
-//   - Blur-autosave behavior hasn't been confirmed yet (does leaving
-//     the field save it in Canvas, or does something else need to
-//     happen?). See extension/README.md.
 //   - Only essay-type questions have been confirmed. Multiple-choice,
 //     fill-in-blank, etc. question types may render this differently —
 //     don't assume this adapter covers them until checked.
 //   - Test end-to-end on a disposable/test submission before using on
 //     a real assignment, per the design doc this was built from.
+// The Update Scores button (type="submit", class="update-scores") is
+// confirmed as the actual commit action — Canvas does not appear to
+// autosave on blur alone, which is why clickUpdateScores exists at all.
 // ---------------------------------------------------------------------
 
 (function (global) {
@@ -60,6 +66,12 @@
     throw new Error(
       "Canvas adapter not implemented for this institution's markup yet — see extension/README.md."
     );
+  };
+  NotImplementedCanvasAdapter.prototype.hasUpdateScoresButton = function () {
+    return false;
+  };
+  NotImplementedCanvasAdapter.prototype.clickUpdateScores = function () {
+    return false;
   };
 
   // Canvas's own header text reads like:
@@ -126,6 +138,25 @@
 
   RealCanvasAdapter.prototype.setScore = function (input, value) {
     setInputValueNative(input, value);
+  };
+
+  function findUpdateScoresButton() {
+    return document.querySelector("#update_scores button.update-scores");
+  }
+
+  RealCanvasAdapter.prototype.hasUpdateScoresButton = function () {
+    return !!findUpdateScoresButton();
+  };
+
+  // A real .click() (not form.submit()) so any submit-event listener
+  // Canvas has bound to the form still fires, same principle as
+  // setInputValueNative — trigger the actual control, not a shortcut
+  // around it.
+  RealCanvasAdapter.prototype.clickUpdateScores = function () {
+    var btn = findUpdateScoresButton();
+    if (!btn || btn.disabled) return false;
+    btn.click();
+    return true;
   };
 
   // The single point that switches the extension from stub to real —

@@ -24,6 +24,7 @@
         "src/shared/transfer-schema.js",
         "src/shared/normalize.js",
         "src/shared/canvas-adapter.js",
+        "src/shared/canvas-navigator.js",
         "src/content/canvas.js"
       ],
       "all_frames": true,

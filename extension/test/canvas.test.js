@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { runPing, runSendGrades } = require("../src/content/canvas.js");
+const { runPing, runSendGrades, runGoToStudent } = require("../src/content/canvas.js");
 const { namesMatch } = require("../src/shared/normalize.js");
 
 function fakeInput() {
@@ -9,8 +9,10 @@ function fakeInput() {
 
 function makeAdapter(opts) {
   const calls = [];
+  const updateScoresCalls = [];
   return {
     calls: calls,
+    updateScoresCalls: updateScoresCalls,
     isCompatiblePage: () => opts.compatible !== false,
     getDisplayedStudentName: () => (opts.displayedName === undefined ? "Alice Smith" : opts.displayedName),
     getQuestionTargets: () => opts.targets || [],
@@ -21,6 +23,11 @@ function makeAdapter(opts) {
         return;
       }
       input.value = String(value);
+    },
+    hasUpdateScoresButton: () => opts.hasUpdateScoresButton !== false,
+    clickUpdateScores: () => {
+      updateScoresCalls.push(true);
+      return opts.updateScoresClickSucceeds !== false;
     },
   };
 }
@@ -129,7 +136,7 @@ test("blocks when a target input is not editable and writes nothing", () => {
   assert.equal(adapter.calls.length, 0);
 });
 
-test("on a full match, fills every field in order and verifies each write", () => {
+test("on a full match, fills every field in order, verifies each write, and clicks Update Scores", () => {
   const targets = twoMatchingTargets();
   const adapter = makeAdapter({ compatible: true, targets: targets });
   const result = runSendGrades(adapter, normalize, {
@@ -140,6 +147,31 @@ test("on a full match, fills every field in order and verifies each write", () =
   assert.equal(adapter.calls.length, 2);
   assert.equal(targets[0].input.value, "8");
   assert.equal(targets[1].input.value, "2");
+  assert.equal(result.updateScoresClicked, true);
+  assert.equal(adapter.updateScoresCalls.length, 1);
+});
+
+test("blocks before writing anything if the Update Scores button isn't found", () => {
+  const targets = twoMatchingTargets();
+  const adapter = makeAdapter({ compatible: true, targets: targets, hasUpdateScoresButton: false });
+  const result = runSendGrades(adapter, normalize, {
+    selectedStudent: { id: "s1", name: "Alice Smith", answers: twoQuestionAnswers() },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "update_scores_button_missing");
+  assert.equal(adapter.calls.length, 0);
+  assert.equal(adapter.updateScoresCalls.length, 0);
+});
+
+test("reports updateScoresClicked: false if the click itself reports failure, without un-filling anything", () => {
+  const targets = twoMatchingTargets();
+  const adapter = makeAdapter({ compatible: true, targets: targets, updateScoresClickSucceeds: false });
+  const result = runSendGrades(adapter, normalize, {
+    selectedStudent: { id: "s1", name: "Alice Smith", answers: twoQuestionAnswers() },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.filled, 2);
+  assert.equal(result.updateScoresClicked, false);
 });
 
 test("stops immediately on a write that fails to verify, reporting partial progress", () => {
@@ -166,4 +198,55 @@ test("debug mode returns diagnostics without leaking student answer text", () =>
   assert.equal(result.debug.questionTargetCount, 2);
   assert.deepEqual(result.debug.mappingIndices, [0, 1]);
   assert.deepEqual(result.debug.extractedMaxScores, [10, 2]);
+});
+
+function makeNavigator(opts) {
+  const nextCalls = [];
+  const prevCalls = [];
+  return {
+    nextCalls: nextCalls,
+    prevCalls: prevCalls,
+    canGoNext: () => opts.canGoNext !== false,
+    canGoPrev: () => opts.canGoPrev !== false,
+    clickNext: () => {
+      nextCalls.push(true);
+      return opts.clickSucceeds !== false;
+    },
+    clickPrev: () => {
+      prevCalls.push(true);
+      return opts.clickSucceeds !== false;
+    },
+  };
+}
+
+test("runGoToStudent clicks next when available", () => {
+  const nav = makeNavigator({});
+  const result = runGoToStudent(nav, "next");
+  assert.equal(result.ok, true);
+  assert.equal(nav.nextCalls.length, 1);
+  assert.equal(nav.prevCalls.length, 0);
+});
+
+test("runGoToStudent clicks prev when available", () => {
+  const nav = makeNavigator({});
+  const result = runGoToStudent(nav, "prev");
+  assert.equal(result.ok, true);
+  assert.equal(nav.prevCalls.length, 1);
+  assert.equal(nav.nextCalls.length, 0);
+});
+
+test("runGoToStudent does not click next when it's not available (e.g. last student)", () => {
+  const nav = makeNavigator({ canGoNext: false });
+  const result = runGoToStudent(nav, "next");
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "not_available");
+  assert.equal(nav.nextCalls.length, 0);
+});
+
+test("runGoToStudent does not click prev when it's not available (e.g. first student)", () => {
+  const nav = makeNavigator({ canGoPrev: false });
+  const result = runGoToStudent(nav, "prev");
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "not_available");
+  assert.equal(nav.prevCalls.length, 0);
 });
