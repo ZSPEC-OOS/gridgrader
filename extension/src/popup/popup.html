@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>GridGrader Canvas Companion</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <h1>GridGrader Canvas Companion</h1>
+
+    <section id="package-status"></section>
+
+    <section id="student-section" hidden>
+      <label for="student-select">Student</label>
+      <select id="student-select"></select>
+
+      <table id="score-preview"></table>
+
+      <div id="match-status"></div>
+    </section>
+
+    <section id="actions" hidden>
+      <button id="send-grades-btn" disabled>Send Grades</button>
+      <button id="clear-data-btn">Clear transferred data</button>
+      <label id="debug-toggle-label">
+        <input type="checkbox" id="debug-toggle" />
+        Debug mode
+      </label>
+    </section>
+
+    <section id="result"></section>
+    <pre id="debug-output" hidden></pre>
+
+    <!-- Plain scripts, not modules — same loading style as the content
+         scripts, so there is exactly one script format in this extension
+         and no bundler is needed to load it unpacked. -->
+    <script src="../shared/transfer-schema.js"></script>
+    <script src="../shared/normalize.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

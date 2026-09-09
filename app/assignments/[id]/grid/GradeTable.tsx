@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { GradeCell } from "./GradeCell";
+import { CanvasTransferButton } from "./CanvasTransferButton";
 
 type Grade = { score: number; feedback: string } | null;
 
 type Question = {
   id: string;
+  index: number;
   header: string;
   maxScore: number;
 };
@@ -23,10 +25,12 @@ type Student = {
 
 export function GradeTable({
   assignmentId,
+  assignmentName,
   questions,
   students,
 }: {
   assignmentId: string;
+  assignmentName: string;
   questions: Question[];
   students: Student[];
 }) {
@@ -112,6 +116,20 @@ export function GradeTable({
             Click a score to set it directly — whole points only.
           </span>
         )}
+      </div>
+
+      <div className="mb-4">
+        <CanvasTransferButton
+          assignmentId={assignmentId}
+          assignmentName={assignmentName}
+          questions={questions}
+          students={students.map((s) => ({
+            id: s.id,
+            name: s.name,
+            answers: s.answers.map((a) => ({ id: a.id, questionId: a.questionId })),
+          }))}
+          grades={grades}
+        />
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white dark:border-border dark:bg-surface">

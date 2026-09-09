@@ -1,0 +1,68 @@
+body {
+  width: 320px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  padding: 12px;
+  color: #1a1a1a;
+}
+
+h1 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+section {
+  margin-bottom: 10px;
+}
+
+select,
+button {
+  width: 100%;
+  padding: 6px;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+td,
+th {
+  border: 1px solid #ddd;
+  padding: 3px 6px;
+  text-align: left;
+}
+
+#match-status {
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+#debug-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-weight: normal;
+}
+
+#debug-toggle-label input {
+  width: auto;
+}
+
+#result {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+#debug-output {
+  background: #f4f4f4;
+  padding: 6px;
+  font-size: 11px;
+  max-height: 150px;
+  overflow: auto;
+}
