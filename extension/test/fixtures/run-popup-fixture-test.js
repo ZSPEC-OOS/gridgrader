@@ -106,6 +106,13 @@ async function main() {
   );
   assert.deepEqual(optionTexts, ["Select a student…", "Alice Smith", "Bob Jones"]);
 
+  // 1b. Canvas already showed Alice at load — the dropdown should have
+  // preloaded her automatically, not left the placeholder selected.
+  const selectedAtLoad = await page.$eval("#student-select", (el) => el.value);
+  assert.equal(selectedAtLoad, "s1", "Alice should be auto-selected on initial load, before any manual pick");
+  const matchStatusAtLoad = await page.textContent("#match-status");
+  assert.match(matchStatusAtLoad, /MATCH/);
+
   const remainingText = await page.textContent("#remaining-count");
   assert.equal(remainingText, "2 of 2 students remaining");
 
