@@ -8,21 +8,34 @@ export function GradeCell({
   feedback,
   regradeMode,
   copyMode,
+  editMode,
   regrading,
+  saving,
   onRegrade,
+  onManualEdit,
 }: {
   score: number | null;
   maxScore: number;
   feedback: string | null;
   regradeMode: boolean;
   copyMode: boolean;
+  editMode: boolean;
   regrading: boolean;
+  saving: boolean;
   onRegrade: () => void;
+  onManualEdit: (score: number) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
 
   async function handleScoreClick() {
+    if (editMode) {
+      setDraft(score !== null ? String(Math.round(score)) : "0");
+      setEditing(true);
+      return;
+    }
     if (score === null) return;
     if (copyMode) {
       try {
@@ -35,6 +48,46 @@ export function GradeCell({
     } else {
       setOpen((o) => !o);
     }
+  }
+
+  function commitEdit() {
+    const parsed = Number(draft);
+    if (
+      !Number.isInteger(parsed) ||
+      parsed < 0 ||
+      parsed > maxScore
+    ) {
+      alert(`Enter a whole number between 0 and ${maxScore}.`);
+      return;
+    }
+    setEditing(false);
+    onManualEdit(parsed);
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          step={1}
+          min={0}
+          max={maxScore}
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitEdit();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          onBlur={commitEdit}
+          disabled={saving}
+          className="w-16 rounded border border-neutral-300 px-1.5 py-1 text-xs dark:border-border dark:bg-surface-muted dark:text-foreground"
+        />
+        <span className="text-xs text-neutral-400 dark:text-muted">
+          / {maxScore}
+        </span>
+      </div>
+    );
   }
 
   const pct = score !== null && maxScore > 0 ? score / maxScore : 0;
@@ -51,17 +104,25 @@ export function GradeCell({
     <div className="relative flex items-center gap-1">
       <button
         onClick={handleScoreClick}
-        disabled={score === null}
-        title={copyMode && score !== null ? "Click to copy" : undefined}
-        className={`w-full rounded px-2 py-1 text-xs font-semibold ${colorClass} ${score === null ? "cursor-default" : ""}`}
+        disabled={saving || (score === null && !editMode)}
+        title={
+          editMode
+            ? "Click to set this score manually"
+            : copyMode && score !== null
+              ? "Click to copy"
+              : undefined
+        }
+        className={`w-full rounded px-2 py-1 text-xs font-semibold ${colorClass} ${score === null && !editMode ? "cursor-default" : ""}`}
       >
-        {copied
-          ? "Copied!"
-          : score === null
-            ? "—"
-            : score % 1 === 0
-              ? score
-              : score.toFixed(1)}
+        {saving
+          ? "…"
+          : copied
+            ? "Copied!"
+            : score === null
+              ? "—"
+              : score % 1 === 0
+                ? score
+                : score.toFixed(1)}
       </button>
 
       {regradeMode && (
