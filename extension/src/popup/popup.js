@@ -137,7 +137,11 @@
       }
       chrome.tabs.sendMessage(tab.id, { type: "PING_CANVAS_PAGE" }, function (response) {
         // No response (wrong page / no content script there) reads as
-        // "not compatible" rather than throwing.
+        // "not compatible" rather than throwing. No frame having a
+        // listener (wrong page entirely) sets chrome.runtime.lastError —
+        // reading it here just acknowledges it so Chrome doesn't log an
+        // "unchecked lastError" warning for an expected case.
+        void chrome.runtime.lastError;
         state.canvasStatus = response || { compatible: false, displayedStudentName: null };
         if (callback) callback();
       });
@@ -216,6 +220,7 @@
           payload: { selectedStudent: state.selectedStudent, debug: state.debug },
         },
         function (response) {
+          void chrome.runtime.lastError;
           if (!response) {
             resultEl.textContent = "No response from the Canvas page. Reload the page and try again.";
             return;
