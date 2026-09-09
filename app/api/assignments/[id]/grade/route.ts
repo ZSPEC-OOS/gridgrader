@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { gradeAnswer } from "@/lib/grading";
 import { mapWithConcurrency } from "@/lib/concurrency";
 import { toErrorMessage } from "@/lib/apiError";
+import { resolveGradingStrictnessLevel } from "@/lib/gradingStrictness";
 
 const CONCURRENCY = 8;
 const DEFAULT_BATCH_SIZE = 40;
@@ -80,7 +81,9 @@ export async function POST(
         criteria: job.answer.question.criteria ?? "",
         maxScore: job.answer.question.maxScore,
         answerText: job.answer.text,
-        gradingTolerancePercent: settings.gradingTolerancePercent,
+        gradingStrictnessLevel: resolveGradingStrictnessLevel(
+          settings.gradingStrictnessLevel
+        ),
       });
 
       const grade = await prisma.grade.upsert({
@@ -167,7 +170,9 @@ export async function POST(
         criteria: question.criteria ?? "",
         maxScore: question.maxScore,
         answerText: answer.text,
-        gradingTolerancePercent: settings.gradingTolerancePercent,
+        gradingStrictnessLevel: resolveGradingStrictnessLevel(
+          settings.gradingStrictnessLevel
+        ),
       });
 
       await prisma.grade.upsert({

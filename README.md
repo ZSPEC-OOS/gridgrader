@@ -40,6 +40,9 @@ npx prisma migrate dev
 npm run dev
 ```
 
+Run `npm test` to run the unit tests (grading prompt construction, settings
+validation) — they don't require a database.
+
 Open http://localhost:3000, then visit **Settings** to add an OpenAI API
 key before using **Grade**.
 

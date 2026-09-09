@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { parseJsonResponse } from "@/lib/apiClient";
+import {
+  DEFAULT_GRADING_STRICTNESS_LEVEL,
+  GRADING_STRICTNESS_LEVELS,
+  GRADING_STRICTNESS_LEVEL_VALUES,
+  type GradingStrictnessLevel,
+} from "@/lib/gradingStrictness";
 
 type SettingsResponse = {
   model: string;
@@ -11,18 +17,18 @@ type SettingsResponse = {
   savedModels: string[];
   hasPin: boolean;
   useMaxCompletionTokens: boolean;
-  gradingTolerancePercent: number;
+  gradingStrictnessLevel: GradingStrictnessLevel;
 };
 
 const MIN_PIN_LENGTH = 4;
-const MAX_GRADING_TOLERANCE_PERCENT = 50;
 
 export default function SettingsPage() {
   const [model, setModel] = useState("gpt-4o-mini");
   const [savedModels, setSavedModels] = useState<string[]>([]);
   const [baseUrl, setBaseUrl] = useState("");
   const [useMaxCompletionTokens, setUseMaxCompletionTokens] = useState(false);
-  const [gradingTolerancePercent, setGradingTolerancePercent] = useState(0);
+  const [gradingStrictnessLevel, setGradingStrictnessLevel] =
+    useState<GradingStrictnessLevel>(DEFAULT_GRADING_STRICTNESS_LEVEL);
   const [apiKey, setApiKey] = useState("");
   const [hasApiKey, setHasApiKey] = useState(false);
   const [apiKeyPreview, setApiKeyPreview] = useState<string | null>(null);
@@ -58,7 +64,7 @@ export default function SettingsPage() {
       setSavedModels(data.savedModels);
       setBaseUrl(data.baseUrl ?? "");
       setUseMaxCompletionTokens(data.useMaxCompletionTokens);
-      setGradingTolerancePercent(data.gradingTolerancePercent);
+      setGradingStrictnessLevel(data.gradingStrictnessLevel);
       setHasApiKey(data.hasApiKey);
       setApiKeyPreview(data.apiKeyPreview);
       setHasPin(data.hasPin);
@@ -155,7 +161,7 @@ export default function SettingsPage() {
           model,
           baseUrl,
           useMaxCompletionTokens,
-          gradingTolerancePercent,
+          gradingStrictnessLevel,
           apiKey,
           newPin: hasPin ? undefined : newPin,
         }),
@@ -164,7 +170,7 @@ export default function SettingsPage() {
       setSavedModels(data.savedModels);
       setBaseUrl(data.baseUrl ?? "");
       setUseMaxCompletionTokens(data.useMaxCompletionTokens);
-      setGradingTolerancePercent(data.gradingTolerancePercent);
+      setGradingStrictnessLevel(data.gradingStrictnessLevel);
       setHasApiKey(data.hasApiKey);
       setApiKeyPreview(data.apiKeyPreview);
       setHasPin(data.hasPin);
@@ -250,9 +256,10 @@ export default function SettingsPage() {
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-neutral-500 dark:text-muted">Grading tolerance</dt>
+              <dt className="text-neutral-500 dark:text-muted">Grading strictness</dt>
               <dd className="font-medium text-neutral-900 dark:text-foreground">
-                {gradingTolerancePercent}%
+                {GRADING_STRICTNESS_LEVELS[gradingStrictnessLevel].label} (
+                {gradingStrictnessLevel}/5)
               </dd>
             </div>
           </dl>
@@ -376,30 +383,52 @@ export default function SettingsPage() {
           <div>
             <div className="flex items-baseline justify-between">
               <label
-                htmlFor="grading-tolerance"
+                htmlFor="grading-strictness"
                 className="block text-xs font-medium text-neutral-500 dark:text-muted"
               >
-                Grading tolerance
+                Grading strictness
               </label>
               <span className="text-sm font-medium text-neutral-900 dark:text-foreground">
-                {gradingTolerancePercent}%
+                {GRADING_STRICTNESS_LEVELS[gradingStrictnessLevel].label} — Level{" "}
+                {gradingStrictnessLevel} of 5
               </span>
             </div>
             <input
-              id="grading-tolerance"
+              id="grading-strictness"
               type="range"
-              min={0}
-              max={MAX_GRADING_TOLERANCE_PERCENT}
+              min={1}
+              max={5}
               step={1}
-              value={gradingTolerancePercent}
-              onChange={(e) => setGradingTolerancePercent(Number(e.target.value))}
+              value={gradingStrictnessLevel}
+              onChange={(e) =>
+                setGradingStrictnessLevel(
+                  Number(e.target.value) as GradingStrictnessLevel
+                )
+              }
               className="mt-2 w-full accent-brand-ink dark:accent-brand-crimson"
             />
+            <div className="mt-1 flex justify-between text-[10px] leading-tight text-neutral-500 dark:text-muted">
+              {GRADING_STRICTNESS_LEVEL_VALUES.map((level) => (
+                <span
+                  key={level}
+                  className={`w-1/5 text-center ${
+                    level === gradingStrictnessLevel
+                      ? "font-semibold text-neutral-900 dark:text-foreground"
+                      : ""
+                  }`}
+                >
+                  {GRADING_STRICTNESS_LEVELS[level].label}
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-neutral-500 dark:text-muted">
+              {GRADING_STRICTNESS_LEVELS[gradingStrictnessLevel].description}
+            </p>
             <p className="mt-1 text-xs text-neutral-500 dark:text-muted">
-              Adds a cushion to grading: an answer scoring within this
-              percentage of full credit is rounded up to full credit, so
-              minor deductions don&apos;t make grading feel overly strict. 0%
-              applies no cushion.
+              This controls how generously the AI interprets whether the
+              rubric has been satisfied — it does not change scores after
+              grading, and never overrides an explicit instructor directive
+              in the criteria.
             </p>
           </div>
 
