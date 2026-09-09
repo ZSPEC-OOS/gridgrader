@@ -9,24 +9,17 @@
 //   setScore(input: HTMLInputElement, value: number): void
 //
 // ---------------------------------------------------------------------
-// STATUS: NOT IMPLEMENTED FOR YOUR CANVAS INSTANCE YET.
-//
-// Canvas's SpeedGrader DOM varies by institution, quiz type, and release,
-// and the design doc this extension was built from explicitly says: do
-// not invent production selectors. Before this adapter can safely write
-// a real grade, it needs, captured from your actual Canvas page's dev
-// tools:
-//   1. The <input> element for one question-level score box.
-//   2. The nearest enclosing question-container HTML/class/data attrs.
-//   3. The element containing the currently displayed student's name.
-//   4. The element/text containing that question's maximum points.
-//   5. Whether entering a score and blurring it auto-saves in Canvas,
-//      or requires an extra action.
-//
-// Until then, isCompatiblePage() always returns false, so the popup
-// will correctly show "wrong page" / disable Send Grades on every page
-// rather than risk a false positive. Fill in a real adapter below once
-// you have that information — see extension/README.md.
+// STATUS: implemented against confirmed real markup from ONE Canvas
+// Classic Quizzes SpeedGrader page (webcampus.unr.edu, essay-type
+// questions). Still open before trusting this on a real roster:
+//   - Blur-autosave behavior hasn't been confirmed yet (does leaving
+//     the field save it in Canvas, or does something else need to
+//     happen?). See extension/README.md.
+//   - Only essay-type questions have been confirmed. Multiple-choice,
+//     fill-in-blank, etc. question types may render this differently —
+//     don't assume this adapter covers them until checked.
+//   - Test end-to-end on a disposable/test submission before using on
+//     a real assignment, per the design doc this was built from.
 // ---------------------------------------------------------------------
 
 (function (global) {
@@ -69,10 +62,76 @@
     );
   };
 
-  // Swap this to a real adapter instance once selectors are confirmed.
-  // Keeping it as a single assignment point means nothing else in the
-  // extension needs to change to go from "stub" to "real".
-  var ACTIVE_ADAPTER = new NotImplementedCanvasAdapter();
+  // Canvas's own header text reads like:
+  //   " Quiz 1: Ch19, 20, 21- Requires Respondus LockDown Browser Results for Kaitlyn Zatek (She/Her) "
+  // — quiz title, then a fixed "Results for <name> (<pronoun>)" suffix
+  // Canvas appends itself. The pronoun parenthetical is optional (a
+  // student with no pronouns set won't have one).
+  function extractStudentNameFromHeaderText(rawText) {
+    var match = rawText.match(/Results for\s+(.+?)\s*(?:\([^)]*\))?\s*$/);
+    return match ? match[1].trim() : null;
+  }
+
+  // Reads only the <h2>'s own text nodes, skipping its nested "View Log"
+  // <a> child — that link's text would otherwise get appended to the
+  // name text.
+  function getHeaderH2Text() {
+    var h2 = document.querySelector("header h2");
+    if (!h2) return null;
+    var text = "";
+    Array.prototype.forEach.call(h2.childNodes, function (node) {
+      if (node.nodeType === Node.TEXT_NODE) text += node.textContent;
+    });
+    return text;
+  }
+
+  // The max-score text sits in a sibling <span class="question_points">
+  // reading like " / 2" — same shared .user_points parent as the score
+  // input itself.
+  function extractMaxScore(input) {
+    var holder = input.closest(".user_points");
+    if (!holder) return null;
+    var pointsEl = holder.querySelector(".question_points");
+    if (!pointsEl) return null;
+    var match = pointsEl.textContent.match(/([\d.]+)/);
+    return match ? parseFloat(match[1]) : null;
+  }
+
+  function RealCanvasAdapter() {}
+
+  RealCanvasAdapter.prototype.isCompatiblePage = function () {
+    return (
+      document.querySelectorAll("input.question_input[data-question-id]").length > 0 &&
+      !!document.querySelector("header h2")
+    );
+  };
+
+  RealCanvasAdapter.prototype.getDisplayedStudentName = function () {
+    var raw = getHeaderH2Text();
+    return raw ? extractStudentNameFromHeaderText(raw) : null;
+  };
+
+  RealCanvasAdapter.prototype.getQuestionTargets = function () {
+    var inputs = document.querySelectorAll("input.question_input[data-question-id]");
+    var targets = [];
+    for (var i = 0; i < inputs.length; i++) {
+      targets.push({
+        index: i,
+        input: inputs[i],
+        maxScore: extractMaxScore(inputs[i]),
+      });
+    }
+    return targets;
+  };
+
+  RealCanvasAdapter.prototype.setScore = function (input, value) {
+    setInputValueNative(input, value);
+  };
+
+  // The single point that switches the extension from stub to real —
+  // nothing else needs to change to go the other direction either, if
+  // this turns out not to hold up on other question types.
+  var ACTIVE_ADAPTER = new RealCanvasAdapter();
 
   function createAdapter() {
     return ACTIVE_ADAPTER;
@@ -81,6 +140,8 @@
   var GridGraderCanvasAdapter = {
     setInputValueNative: setInputValueNative,
     NotImplementedCanvasAdapter: NotImplementedCanvasAdapter,
+    RealCanvasAdapter: RealCanvasAdapter,
+    extractStudentNameFromHeaderText: extractStudentNameFromHeaderText,
     createAdapter: createAdapter,
   };
 
