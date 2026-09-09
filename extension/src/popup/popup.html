@@ -13,14 +13,21 @@
     <section id="student-section" hidden>
       <label for="student-select">Student</label>
       <select id="student-select"></select>
+      <div id="remaining-count"></div>
 
       <table id="score-preview"></table>
 
       <div id="match-status"></div>
     </section>
 
+    <section id="canvas-nav-row" hidden>
+      <button id="prev-student-btn" title="Navigate Canvas to the previous student">&#9664; Prev</button>
+      <button id="next-student-btn" title="Navigate Canvas to the next student">Next &#9654;</button>
+      <div id="nav-status"></div>
+    </section>
+
     <section id="actions" hidden>
-      <button id="send-grades-btn" disabled>Send Grades</button>
+      <button id="update-grades-btn" disabled>Update Grades</button>
       <button id="clear-data-btn">Clear transferred data</button>
       <label id="debug-toggle-label">
         <input type="checkbox" id="debug-toggle" />

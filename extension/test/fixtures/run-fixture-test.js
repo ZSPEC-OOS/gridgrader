@@ -62,6 +62,13 @@ async function main() {
     // attached, so this second call is what these two booleans measure).
     adapter.setScore(firstInput, 2);
 
+    const hasUpdateScoresButton = adapter.hasUpdateScoresButton();
+    let updateScoresClicked = false;
+    document
+      .querySelector("#update_scores button.update-scores")
+      .addEventListener("click", () => (updateScoresClicked = true));
+    const clickResult = adapter.clickUpdateScores();
+
     return {
       compatible,
       studentName,
@@ -70,6 +77,9 @@ async function main() {
       valueAfterSecondWrite: firstInput.value,
       sawInputEvent,
       sawChangeEvent,
+      hasUpdateScoresButton,
+      clickResult,
+      updateScoresClicked,
     };
   });
 
@@ -89,6 +99,9 @@ async function main() {
   assert.equal(result.valueAfterSecondWrite, "2", "setScore wrote the expected value");
   assert.equal(result.sawInputEvent, true, "setScore dispatched an input event");
   assert.equal(result.sawChangeEvent, true, "setScore dispatched a change event");
+  assert.equal(result.hasUpdateScoresButton, true, "Update Scores button should be found");
+  assert.equal(result.clickResult, true, "clickUpdateScores() should report success");
+  assert.equal(result.updateScoresClicked, true, "clickUpdateScores() should actually click the real button");
 
   console.log("All fixture assertions passed.");
 }

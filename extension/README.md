@@ -8,11 +8,13 @@ credential.
 
 **Status: wired against real markup from one Canvas Classic Quizzes
 SpeedGrader page (webcampus.unr.edu, essay-type questions), verified
-against a saved HTML fixture — but not yet confirmed on a real, live
-Canvas page end-to-end.** Two things still open, both in "Before trusting
-this on a real roster" below: whether blur alone autosaves in Canvas, and
-whether other question types (multiple choice, fill-in-blank, etc.) use
-the same markup shape.
+against saved HTML fixtures — but not yet confirmed on a real, live
+Canvas page end-to-end.** One thing still open, in "Before trusting this
+on a real roster" below: whether other question types (multiple choice,
+fill-in-blank, etc.) use the same markup shape. (Autosave is resolved —
+Canvas doesn't autosave on blur; scores are committed by clicking the
+real "Update Scores" button, which **Update Grades** now does for you as
+part of the same action.)
 
 ## Install (no build step)
 
@@ -29,14 +31,25 @@ the same markup shape.
 
 1. Finish grading an assignment in GridGrader.
 2. On the Grid Grader page, click **Send to Canvas Extension**.
-3. Open the Canvas SpeedGrader page for that assignment.
+3. Open the Canvas SpeedGrader page for that assignment, on any student.
 4. Open this extension's popup, pick the student from the dropdown, and
    check the match status.
 5. Only if it says **MATCH** — never on MISMATCH or UNDETECTED — click
-   **Send Grades**.
-6. Confirm in Canvas that the fields show the values you expect. The
-   extension reports "fields filled," not "Canvas confirmed saved" —
-   those are different claims (see `src/content/canvas.js`).
+   **Update Grades**. This fills the score fields *and* clicks Canvas's
+   own **Update Scores** button in one action. The extension reports
+   "fields filled" (and whether Update Scores was clicked), not "Canvas
+   confirmed saved" — those are different claims (see `src/content/canvas.js`).
+   On success, that student disappears from the dropdown (tracked as
+   done) so you always know how many are left.
+6. Click **Next ▶** to have the extension click Canvas's own next-student
+   button for you. It then re-checks who Canvas is showing and, if that
+   name exactly matches someone still left in the dropdown, auto-selects
+   them — you still get to see MATCH/MISMATCH before doing anything, this
+   just saves you re-opening the dropdown each time. **Prev ◀** works the
+   same way backward. Neither button fills or sends anything by itself.
+7. Confirm in Canvas periodically that the values look right — this
+   automates the navigation and the two clicks, it doesn't remove the
+   value of spot-checking, especially early on with a new quiz/course.
 
 ## Before trusting this on a real roster
 
@@ -55,21 +68,28 @@ HTML it was verified against), not guessed selectors. What it does:
   `input`/`change` events and a blur — necessary because Canvas keeps a
   second, hidden input (`question_input_hidden`) in sync with the visible
   one via its own JS, which only fires on a real-looking edit.
+- Commits via the real `#update_scores button.update-scores` (a form
+  submit), the same control a human grader would click. The preflight
+  blocks up front — before touching any field — if this button isn't
+  found, rather than leaving fields filled with nothing to commit them.
 
-Two things are **not** yet confirmed on an actual live Canvas page:
+`src/shared/canvas-navigator.js`'s `RealCanvasNavigator` is a *separate*
+adapter for a *separate* document — Canvas's top-frame student
+prev/next buttons (`#prev-student-button` / `#next-student-button`),
+confirmed from real markup the same way. It only ever clicks a
+navigation button; it has no access to score data and can't fill or
+send anything.
 
-1. **Autosave.** Does leaving the field (blur) alone save it in Canvas,
-   or is another action needed? Test with a disposable/test submission:
-   type a value, blur, reload the page, see if it held.
-2. **Other question types.** Only essay-type questions have been
-   confirmed. If a question is multiple-choice, fill-in-the-blank, etc.,
-   check its markup before assuming this adapter covers it — it may not.
+**Not** yet confirmed on an actual live Canvas page: only essay-type
+questions have had their markup checked. If a question is
+multiple-choice, fill-in-the-blank, etc., check its markup before
+assuming `RealCanvasAdapter` covers it — it may not.
 
-If markup differs from what's here, update `RealCanvasAdapter` (and
-`test/fixtures/canvas-quiz-page.html` to match) — `canvas.js`'s
-preflight/send logic and the popup are written against the adapter
-interface, not against Canvas markup directly, so nothing else needs to
-change.
+If markup differs from what's here, update the relevant adapter/navigator
+(and the matching fixture under `test/fixtures/` to match) —
+`canvas.js`'s preflight/send/navigate logic and the popup are written
+against the adapter and navigator interfaces, not against Canvas markup
+directly, so nothing else needs to change.
 
 ## Running the tests
 
@@ -87,20 +107,26 @@ student, question-count or max-score mismatch, null score, non-editable
 input) — all against a fake adapter, since none of that needs a real
 Canvas page.
 
-There's one additional test that needs a real browser (Playwright),
-which is why it's kept separate from `npm test` rather than folded in:
+Three additional tests need a real browser (Playwright), which is why
+they're kept separate from `npm test` rather than folded in:
 
 ```bash
-node test/fixtures/run-fixture-test.js
+node test/fixtures/run-fixture-test.js           # RealCanvasAdapter vs. canvas-quiz-page.html
+node test/fixtures/run-navigator-fixture-test.js # RealCanvasNavigator vs. canvas-nav-page.html
+node test/fixtures/run-popup-fixture-test.js     # popup.html/popup.js vs. a mocked chrome.* API
 ```
 
-This runs the actual `RealCanvasAdapter` — the same code that runs
-against live Canvas — against the saved fixture in
-`test/fixtures/canvas-quiz-page.html`, checking page-compatibility
-detection, student-name extraction, question ordering/max-score
-extraction, and that a write actually lands and fires the right events.
-It does not touch a real Canvas page; it's the closest thing to that
-without one.
+The first two run the actual adapter/navigator code — the same code that
+runs against live Canvas — against saved HTML fixtures, checking
+page-compatibility detection, student-name extraction, question
+ordering/max-score extraction, that a score write actually lands and
+fires the right events, that Update Scores actually gets clicked, and
+that the nav buttons actually get clicked. The third loads the real
+popup with `chrome.storage`/`chrome.tabs` mocked, and checks the parts a
+pure-function test can't: rendering, the dropdown losing a student after
+a successful send, the remaining-count text, and the navigate-then-
+auto-select flow. None of these touch a real Canvas or GridGrader page;
+they're the closest thing to that without one.
 
 ## Architecture
 
@@ -109,30 +135,51 @@ GridGrader page --postMessage--> GridGrader content script --validate--> chrome.
                                                                                 |
                                                                                 v
                                                                         Extension popup
-                                                                                |
-                                                          selected student + SEND_GRADES
-                                                                                v
-                                                                    Canvas content script
-                                                                       (preflight, then
-                                                                        fill + verify)
+                                                                          |          |
+                                                    selected student + SEND_GRADES   |
+                                                                          v          |  CLICK_NEXT/PREV_STUDENT
+                                                              Canvas content script   |
+                                                             (score iframe: preflight, v
+                                                              fill, verify, commit)  Canvas content script
+                                                                                    (top frame: nav only)
 ```
+
+The score-entry markup and the student prev/next controls are two
+**separate documents** in Canvas (an iframe and its parent top frame) —
+that's why there are two adapters and two independently-gated message
+listeners in `canvas.js`, not one. See the comments there and in
+`canvas-navigator.js` for why.
 
 - `src/shared/transfer-schema.js` — the exact same versioned contract as
   GridGrader's `lib/canvas-transfer/schema.ts`. Kept in sync by hand;
   there's no shared build between the two projects.
 - `src/shared/normalize.js` — exact-match-only student name comparison.
 - `src/shared/canvas-adapter.js` — isolates all Canvas-specific selectors
-  behind one interface (see above).
+  for the score-entry iframe behind one interface (see above).
+- `src/shared/canvas-navigator.js` — isolates the top-frame prev/next
+  student controls behind a separate interface.
 - `src/content/gridgrader.js` — listens on the GridGrader origin only,
   validates, writes to `chrome.storage.local`.
-- `src/content/canvas.js` — preflight-then-write orchestration on the
-  Canvas origin. Nothing is written unless every check passes first.
-- `src/popup/` — status display, student picker, match indicator, Send
-  Grades / Clear buttons, optional debug mode.
+- `src/content/canvas.js` — preflight-then-write orchestration for
+  scores, plus navigation orchestration, each independently gated on
+  which document it's actually running in. Nothing is written unless
+  every check passes first.
+- `src/popup/` — status display, student picker (filtered to exclude
+  already-sent students), match indicator, Update Grades / Prev / Next /
+  Clear buttons, optional debug mode.
 
-## Non-goals (by design)
+## Non-goals (by design) — and one deliberate exception
 
-No Canvas API integration, no automatic roster traversal, no fuzzy name
-matching, no silent partial sends, no automatic final submission. See the
-GridGrader repo's design documents this extension was built from for the
-full rationale.
+No Canvas API integration, no fuzzy name matching, no silent partial
+sends, no automatic final submission. See the GridGrader repo's design
+documents this extension was built from for the full rationale.
+
+**Automatic roster traversal** (the Prev/Next buttons driving Canvas's
+own navigation) was originally listed as a non-goal for MVP in that same
+design doc. It's implemented anyway, at the explicit, informed request
+of the person operating this extension — clicking Next never fills or
+sends a grade by itself, it only moves to a different page and lets you
+re-check MATCH there, so it doesn't weaken the actual safety guarantees
+(student-identity check, max-score check, preflight-before-write) those
+docs were protecting. Worth knowing if you're comparing this code back
+against the original design docs and wondering why it's here.

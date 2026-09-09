@@ -18,6 +18,20 @@
     };
   }
 
+  // Pure orchestration for the top-frame student-navigation buttons —
+  // separate from runPing/runSendGrades because it runs against a
+  // different adapter-like object (CanvasNavigator) in a different frame
+  // (the top page, not the score-entry iframe). Never writes any grade
+  // data; it only clicks a navigation control.
+  function runGoToStudent(navigator, direction) {
+    var can = direction === "next" ? navigator.canGoNext() : navigator.canGoPrev();
+    if (!can) {
+      return { ok: false, reason: "not_available" };
+    }
+    var clicked = direction === "next" ? navigator.clickNext() : navigator.clickPrev();
+    return { ok: clicked };
+  }
+
   // request: { selectedStudent: { id, name, answers: [{questionIndex, maxScore, score}] }, debug?: boolean }
   function runSendGrades(adapter, normalize, request) {
     var selectedStudent = request.selectedStudent;
@@ -138,6 +152,18 @@
       }
     }
 
+    // If the commit step can't happen, don't bother filling anything —
+    // a half-done "filled but never committed" state is worse than
+    // blocking up front.
+    if (!adapter.hasUpdateScoresButton()) {
+      return blocked(
+        "update_scores_button_missing",
+        "Could not find the Update Scores button on this page.",
+        null,
+        debugInfo
+      );
+    }
+
     // Preflight passed. Write and verify one at a time, stopping
     // immediately (reporting partial progress) if a write doesn't stick —
     // never assume the DOM held still for the whole batch.
@@ -168,7 +194,18 @@
       filled++;
     }
 
-    return { ok: true, filled: filled, debug: debugInfo };
+    // All fields filled and verified — commit via the real Update Scores
+    // button (a form submit), the same way a human grader would. This is
+    // "fields filled and commit clicked," not "Canvas confirmed saved" —
+    // we have no way to observe the actual server round-trip from here.
+    var updateScoresClicked = adapter.clickUpdateScores();
+
+    return {
+      ok: true,
+      filled: filled,
+      updateScoresClicked: updateScoresClicked,
+      debug: debugInfo,
+    };
   }
 
   function blocked(reason, message, detail, debugInfo) {
@@ -185,6 +222,7 @@
   var GridGraderCanvasContent = {
     runPing: runPing,
     runSendGrades: runSendGrades,
+    runGoToStudent: runGoToStudent,
   };
 
   if (typeof module !== "undefined" && module.exports) {
@@ -223,6 +261,34 @@
       }
       if (message && message.type === "SEND_GRADES") {
         sendResponse(runSendGrades(adapter, normalize, message.payload || {}));
+        return true;
+      }
+      return false;
+    });
+  }
+
+  // Independent second listener for the top-frame navigation controls.
+  // This is a *different* document (see canvas-navigator.js) than the
+  // score-entry iframe above, so it's gated on its own compatibility
+  // check (navigator.isAvailable(), not adapter.isCompatiblePage()) —
+  // whichever frame actually has the prev/next buttons is the one that
+  // registers this listener, keeping the same "only zero or one real
+  // responder per message type" guarantee, just for a different pair of
+  // message types answered by a different frame.
+  var navigator_ = global.GridGraderCanvasNavigator.createNavigator();
+  if (
+    typeof chrome !== "undefined" &&
+    chrome.runtime &&
+    chrome.runtime.onMessage &&
+    navigator_.isAvailable()
+  ) {
+    chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
+      if (message && message.type === "CLICK_NEXT_STUDENT") {
+        sendResponse(runGoToStudent(navigator_, "next"));
+        return true;
+      }
+      if (message && message.type === "CLICK_PREV_STUDENT") {
+        sendResponse(runGoToStudent(navigator_, "prev"));
         return true;
       }
       return false;
