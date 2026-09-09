@@ -41,7 +41,9 @@ export function GradeTable({
   });
   const [regradeMode, setRegradeMode] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [regradingId, setRegradingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const totalMax = questions.reduce((s, q) => s + q.maxScore, 0);
 
@@ -66,6 +68,27 @@ export function GradeTable({
     }
   }
 
+  async function handleManualEdit(answerId: string, score: number) {
+    setSavingId(answerId);
+    try {
+      const res = await fetch(`/api/assignments/${assignmentId}/grade`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answerId, score }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Save failed.");
+      setGrades((prev) => ({
+        ...prev,
+        [answerId]: { score: data.score, feedback: data.feedback },
+      }));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Save failed.");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
     <div className="mt-6">
       <div className="mb-3 flex flex-wrap items-center gap-6">
@@ -79,6 +102,16 @@ export function GradeTable({
           onChange={setCopyMode}
           label="Click score to copy"
         />
+        <ToggleSwitch
+          checked={editMode}
+          onChange={setEditMode}
+          label="Manual override"
+        />
+        {editMode && (
+          <span className="text-xs text-neutral-500 dark:text-muted">
+            Click a score to set it directly — whole points only.
+          </span>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white dark:border-border dark:bg-surface">
@@ -130,8 +163,11 @@ export function GradeTable({
                             feedback={grade?.feedback ?? null}
                             regradeMode={regradeMode}
                             copyMode={copyMode}
+                            editMode={editMode}
                             regrading={regradingId === answer.id}
+                            saving={savingId === answer.id}
                             onRegrade={() => handleRegrade(answer.id)}
+                            onManualEdit={(score) => handleManualEdit(answer.id, score)}
                           />
                         )}
                       </td>

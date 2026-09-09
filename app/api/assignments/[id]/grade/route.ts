@@ -225,3 +225,70 @@ export async function POST(
     done,
   });
 }
+
+// Manual override: the instructor sets an exact score directly, bypassing
+// the AI entirely. No partial credit is enforced here the same way it is
+// for AI grading — the score must be a whole number, never a fraction.
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+
+  const answerId = typeof body.answerId === "string" ? body.answerId : null;
+  const score = Number(body.score);
+
+  if (!answerId) {
+    return NextResponse.json({ error: "answerId is required." }, { status: 400 });
+  }
+  if (!Number.isInteger(score)) {
+    return NextResponse.json(
+      { error: "Score must be a whole number — no half points." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const answer = await prisma.answer.findFirst({
+      where: { id: answerId, student: { assignmentId: id } },
+      include: { question: true },
+    });
+
+    if (!answer) {
+      return NextResponse.json({ error: "Answer not found." }, { status: 404 });
+    }
+
+    if (score < 0 || score > answer.question.maxScore) {
+      return NextResponse.json(
+        { error: `Score must be between 0 and ${answer.question.maxScore}.` },
+        { status: 400 }
+      );
+    }
+
+    const grade = await prisma.grade.upsert({
+      where: { answerId },
+      create: {
+        answerId,
+        score,
+        maxScore: answer.question.maxScore,
+        feedback: "Manually set by instructor.",
+        model: "manual",
+      },
+      update: {
+        score,
+        maxScore: answer.question.maxScore,
+        model: "manual",
+        gradedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      answerId,
+      score: grade.score,
+      feedback: grade.feedback,
+    });
+  } catch (err) {
+    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+  }
+}
