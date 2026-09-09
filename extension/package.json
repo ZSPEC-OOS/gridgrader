@@ -1,0 +1,8 @@
+{
+  "name": "gridgrader-canvas-companion",
+  "private": true,
+  "description": "Dev convenience only — the extension itself needs no npm install to load unpacked in Chrome.",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

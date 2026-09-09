@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "GridGrader Canvas Companion",
+  "version": "0.1.0",
+  "description": "Receives graded scores from GridGrader and fills Canvas question-level score fields only after a strict student-identity and max-score preflight check.",
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "GridGrader Canvas Companion"
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://YOUR-GRIDGRADER-DOMAIN/*",
+    "https://YOUR-SCHOOL.instructure.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://YOUR-GRIDGRADER-DOMAIN/*"],
+      "js": ["src/shared/transfer-schema.js", "src/content/gridgrader.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://YOUR-SCHOOL.instructure.com/*"],
+      "js": [
+        "src/shared/transfer-schema.js",
+        "src/shared/normalize.js",
+        "src/shared/canvas-adapter.js",
+        "src/content/canvas.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

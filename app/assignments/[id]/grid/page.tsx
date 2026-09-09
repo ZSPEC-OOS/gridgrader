@@ -44,8 +44,10 @@ export default async function GridPage({
 
       <GradeTable
         assignmentId={assignment.id}
+        assignmentName={assignment.name}
         questions={assignment.questions.map((q) => ({
           id: q.id,
+          index: q.index,
           header: q.header,
           maxScore: q.maxScore,
         }))}
