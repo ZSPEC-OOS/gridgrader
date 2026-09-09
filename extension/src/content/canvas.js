@@ -197,9 +197,24 @@
   // Browser wiring — only registered when actually running as a content
   // script. The popup sends PING and SEND_GRADES; nothing here ever fires
   // without the popup asking for it (no auto-send on page load).
-  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+  //
+  // Classic Quiz SpeedGrader renders the actual question/score markup
+  // inside an iframe, so this script has to run in every frame
+  // (manifest's `all_frames: true`) to ever find it. That means more than
+  // one frame in the same tab could receive the popup's message — the top
+  // page (no quiz markup) and the quiz iframe (has it). Rather than rely
+  // on unspecified behavior for what happens when multiple frames answer
+  // the same chrome.tabs.sendMessage call, only the frame that actually
+  // finds a compatible page registers a listener at all. Every other
+  // frame stays silent, so there is only ever zero or one real responder.
+  var adapter = global.GridGraderCanvasAdapter.createAdapter();
+  if (
+    typeof chrome !== "undefined" &&
+    chrome.runtime &&
+    chrome.runtime.onMessage &&
+    adapter.isCompatiblePage()
+  ) {
     chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
-      var adapter = global.GridGraderCanvasAdapter.createAdapter();
       var normalize = global.GridGraderNormalize;
 
       if (message && message.type === "PING_CANVAS_PAGE") {

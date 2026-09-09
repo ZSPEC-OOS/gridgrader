@@ -10,7 +10,7 @@
   "permissions": ["storage"],
   "host_permissions": [
     "https://gridgrader.vercel.app/*",
-    "https://YOUR-SCHOOL.instructure.com/*"
+    "https://webcampus.unr.edu/*"
   ],
   "content_scripts": [
     {
@@ -19,13 +19,14 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://YOUR-SCHOOL.instructure.com/*"],
+      "matches": ["https://webcampus.unr.edu/*"],
       "js": [
         "src/shared/transfer-schema.js",
         "src/shared/normalize.js",
         "src/shared/canvas-adapter.js",
         "src/content/canvas.js"
       ],
+      "all_frames": true,
       "run_at": "document_idle"
     }
   ]
