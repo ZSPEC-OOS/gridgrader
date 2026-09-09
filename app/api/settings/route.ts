@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { toErrorMessage } from "@/lib/apiError";
 import { hashPin } from "@/lib/pin";
+import {
+  DEFAULT_GRADING_STRICTNESS_LEVEL,
+  isGradingStrictnessLevel,
+} from "@/lib/gradingStrictness";
 
 const SETTINGS_ID = 1;
 const MIN_PIN_LENGTH = 4;
-const MAX_GRADING_TOLERANCE_PERCENT = 50;
 
 export async function GET() {
   try {
@@ -23,7 +26,7 @@ export async function GET() {
         savedModels: [],
         hasPin: false,
         useMaxCompletionTokens: false,
-        gradingTolerancePercent: 0,
+        gradingStrictnessLevel: DEFAULT_GRADING_STRICTNESS_LEVEL,
       });
     }
 
@@ -38,7 +41,7 @@ export async function GET() {
       savedModels: settings.savedModels,
       hasPin: Boolean(settings.pinHash),
       useMaxCompletionTokens: settings.useMaxCompletionTokens,
-      gradingTolerancePercent: settings.gradingTolerancePercent,
+      gradingStrictnessLevel: settings.gradingStrictnessLevel,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
@@ -56,9 +59,6 @@ export async function POST(req: NextRequest) {
     typeof body.baseUrl === "string" ? body.baseUrl.trim() : "";
   const newPin = typeof body.newPin === "string" ? body.newPin.trim() : "";
   const useMaxCompletionTokens = Boolean(body.useMaxCompletionTokens);
-  const gradingTolerancePercent = Number.isFinite(body.gradingTolerancePercent)
-    ? Math.round(body.gradingTolerancePercent)
-    : 0;
 
   if (baseUrlInput) {
     try {
@@ -71,14 +71,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (
-    gradingTolerancePercent < 0 ||
-    gradingTolerancePercent > MAX_GRADING_TOLERANCE_PERCENT
-  ) {
+  // Missing entirely defaults to Balanced; a present-but-invalid value
+  // (fractional, out of range, wrong type) is rejected outright rather
+  // than silently normalized.
+  const gradingStrictnessLevel =
+    body.gradingStrictnessLevel === undefined
+      ? DEFAULT_GRADING_STRICTNESS_LEVEL
+      : isGradingStrictnessLevel(body.gradingStrictnessLevel)
+        ? body.gradingStrictnessLevel
+        : null;
+
+  if (gradingStrictnessLevel === null) {
     return NextResponse.json(
-      {
-        error: `Grading tolerance must be between 0 and ${MAX_GRADING_TOLERANCE_PERCENT}%.`,
-      },
+      { error: "Grading strictness must be a whole number from 1 to 5." },
       { status: 400 }
     );
   }
@@ -117,7 +122,7 @@ export async function POST(req: NextRequest) {
         savedModels,
         pinHash,
         useMaxCompletionTokens,
-        gradingTolerancePercent,
+        gradingStrictnessLevel,
       },
       update: {
         provider,
@@ -129,7 +134,7 @@ export async function POST(req: NextRequest) {
         savedModels,
         pinHash,
         useMaxCompletionTokens,
-        gradingTolerancePercent,
+        gradingStrictnessLevel,
       },
     });
 
@@ -144,7 +149,7 @@ export async function POST(req: NextRequest) {
       savedModels: settings.savedModels,
       hasPin: Boolean(settings.pinHash),
       useMaxCompletionTokens: settings.useMaxCompletionTokens,
-      gradingTolerancePercent: settings.gradingTolerancePercent,
+      gradingStrictnessLevel: settings.gradingStrictnessLevel,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
