@@ -11,6 +11,14 @@
     if (typeof name !== "string") return "";
     return name
       .normalize("NFKC")
+      // Strip a trailing "(...)" annotation — e.g. a pronoun tag like
+      // "(She/Her)" that may be present on one side (a roster's raw name
+      // field, or Canvas's own displayed text) and not the other. This is
+      // a defined, harmless formatting difference, not fuzzy matching: it
+      // doesn't tolerate typos or near-misses, it just ignores a bracketed
+      // suffix that doesn't change who the name refers to. A parenthetical
+      // in the middle of a name (e.g. a nickname) is left alone.
+      .replace(/\s*\([^)]*\)\s*$/, "")
       .trim()
       .replace(/\s+/g, " ")
       .toLowerCase();
