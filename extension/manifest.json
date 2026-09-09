@@ -9,12 +9,12 @@
   },
   "permissions": ["storage"],
   "host_permissions": [
-    "https://YOUR-GRIDGRADER-DOMAIN/*",
+    "https://gridgrader.vercel.app/*",
     "https://YOUR-SCHOOL.instructure.com/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://YOUR-GRIDGRADER-DOMAIN/*"],
+      "matches": ["https://gridgrader.vercel.app/*"],
       "js": ["src/shared/transfer-schema.js", "src/content/gridgrader.js"],
       "run_at": "document_idle"
     },
