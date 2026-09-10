@@ -9,7 +9,10 @@ import {
   type GradingStrictnessLevel,
 } from "@/lib/gradingStrictness";
 
+type Provider = "openai" | "deepseek";
+
 type SettingsResponse = {
+  provider: Provider;
   model: string;
   baseUrl: string | null;
   hasApiKey: boolean;
@@ -22,7 +25,34 @@ type SettingsResponse = {
 
 const MIN_PIN_LENGTH = 4;
 
+const PROVIDER_DEFAULTS: Record<
+  Provider,
+  { label: string; baseUrl: string; model: string }
+> = {
+  openai: {
+    label: "OpenAI",
+    baseUrl: "",
+    model: "gpt-4o-mini",
+  },
+  deepseek: {
+    label: "DeepSeek",
+    baseUrl: "https://api.deepseek.com",
+    model: "deepseek-chat",
+  },
+};
+
+// Every known provider's default model, so switching providers only
+// replaces the model field when it's still at some provider's default
+// (or empty) — a custom model name the user typed is left alone.
+const KNOWN_DEFAULT_MODELS = new Set(
+  Object.values(PROVIDER_DEFAULTS).map((p) => p.model)
+);
+const KNOWN_DEFAULT_BASE_URLS = new Set(
+  Object.values(PROVIDER_DEFAULTS).map((p) => p.baseUrl)
+);
+
 export default function SettingsPage() {
+  const [provider, setProvider] = useState<Provider>("openai");
   const [model, setModel] = useState("gpt-4o-mini");
   const [savedModels, setSavedModels] = useState<string[]>([]);
   const [baseUrl, setBaseUrl] = useState("");
@@ -60,6 +90,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/settings");
       const data = await parseJsonResponse<SettingsResponse>(res);
+      setProvider(data.provider);
       setModel(data.model);
       setSavedModels(data.savedModels);
       setBaseUrl(data.baseUrl ?? "");
@@ -107,6 +138,13 @@ export default function SettingsPage() {
     } finally {
       setUnlocking(false);
     }
+  }
+
+  function handleProviderChange(next: Provider) {
+    setProvider(next);
+    const defaults = PROVIDER_DEFAULTS[next];
+    setBaseUrl((prev) => (KNOWN_DEFAULT_BASE_URLS.has(prev.trim()) ? defaults.baseUrl : prev));
+    setModel((prev) => (KNOWN_DEFAULT_MODELS.has(prev.trim()) || !prev.trim() ? defaults.model : prev));
   }
 
   async function handleTest() {
@@ -157,7 +195,7 @@ export default function SettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: "openai",
+          provider,
           model,
           baseUrl,
           useMaxCompletionTokens,
@@ -167,6 +205,7 @@ export default function SettingsPage() {
         }),
       });
       const data = await parseJsonResponse<SettingsResponse>(res);
+      setProvider(data.provider);
       setSavedModels(data.savedModels);
       setBaseUrl(data.baseUrl ?? "");
       setUseMaxCompletionTokens(data.useMaxCompletionTokens);
@@ -231,7 +270,9 @@ export default function SettingsPage() {
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-neutral-500 dark:text-muted">Provider</dt>
-              <dd className="font-medium text-neutral-900 dark:text-foreground">OpenAI</dd>
+              <dd className="font-medium text-neutral-900 dark:text-foreground">
+                {PROVIDER_DEFAULTS[provider].label}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-neutral-500 dark:text-muted">Base URL</dt>
@@ -313,11 +354,12 @@ export default function SettingsPage() {
               Provider
             </label>
             <select
-              value="openai"
-              onChange={() => {}}
+              value={provider}
+              onChange={(e) => handleProviderChange(e.target.value as Provider)}
               className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
             >
               <option value="openai">OpenAI</option>
+              <option value="deepseek">DeepSeek</option>
             </select>
           </div>
 
@@ -329,12 +371,17 @@ export default function SettingsPage() {
               type="url"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="https://api.openai.com/v1"
+              placeholder={
+                provider === "deepseek"
+                  ? "https://api.deepseek.com"
+                  : "https://api.openai.com/v1"
+              }
               className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 dark:border-border dark:bg-surface-muted dark:text-foreground dark:placeholder:text-muted"
             />
             <p className="mt-1 text-xs text-neutral-500 dark:text-muted">
-              Optional — only needed for a proxy, Azure OpenAI, or another
-              OpenAI-compatible endpoint. Leave blank for the default.
+              {provider === "deepseek"
+                ? "DeepSeek's API is OpenAI-compatible. Leave blank to use https://api.deepseek.com."
+                : "Optional — only needed for a proxy, Azure OpenAI, or another OpenAI-compatible endpoint. Leave blank for the default."}
             </p>
           </div>
 
@@ -346,7 +393,7 @@ export default function SettingsPage() {
               list="model-options"
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              placeholder="Type a model name, e.g. gpt-4o-mini"
+              placeholder={`Type a model name, e.g. ${PROVIDER_DEFAULTS[provider].model}`}
               className="mt-1 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
             />
             <datalist id="model-options">
