@@ -11,6 +11,7 @@ export function GradeCell({
   editMode,
   regrading,
   saving,
+  changedFrom,
   onRegrade,
   onManualEdit,
 }: {
@@ -22,6 +23,9 @@ export function GradeCell({
   editMode: boolean;
   regrading: boolean;
   saving: boolean;
+  // Set only when the most recent regrade actually changed this score —
+  // holds the prior value so the indicator can say what it changed from.
+  changedFrom: number | null;
   onRegrade: () => void;
   onManualEdit: (score: number) => void;
 }) {
@@ -102,28 +106,38 @@ export function GradeCell({
 
   return (
     <div className="relative flex items-center gap-1">
-      <button
-        onClick={handleScoreClick}
-        disabled={saving || (score === null && !editMode)}
-        title={
-          editMode
-            ? "Click to set this score manually"
-            : copyMode && score !== null
-              ? "Click to copy"
-              : undefined
-        }
-        className={`w-full rounded px-2 py-1 text-xs font-semibold ${colorClass} ${score === null && !editMode ? "cursor-default" : ""}`}
-      >
-        {saving
-          ? "…"
-          : copied
-            ? "Copied!"
-            : score === null
-              ? "—"
-              : score % 1 === 0
-                ? score
-                : score.toFixed(1)}
-      </button>
+      <div className="relative">
+        <button
+          onClick={handleScoreClick}
+          disabled={saving || (score === null && !editMode)}
+          title={
+            changedFrom !== null
+              ? `Changed by regrade: ${changedFrom} → ${score}`
+              : editMode
+                ? "Click to set this score manually"
+                : copyMode && score !== null
+                  ? "Click to copy"
+                  : undefined
+          }
+          className={`w-full rounded px-2 py-1 text-xs font-semibold ${colorClass} ${score === null && !editMode ? "cursor-default" : ""}`}
+        >
+          {saving
+            ? "…"
+            : copied
+              ? "Copied!"
+              : score === null
+                ? "—"
+                : score % 1 === 0
+                  ? score
+                  : score.toFixed(1)}
+        </button>
+        {changedFrom !== null && (
+          <span
+            aria-hidden="true"
+            className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-surface"
+          />
+        )}
+      </div>
 
       {regradeMode && (
         <button
