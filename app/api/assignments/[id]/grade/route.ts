@@ -52,7 +52,7 @@ export async function POST(
         questions: { orderBy: { index: "asc" } },
         students: {
           orderBy: { index: "asc" },
-          include: { answers: { include: { question: true } } },
+          include: { answers: { include: { question: true, grade: true } } },
         },
       },
     });
@@ -88,6 +88,14 @@ export async function POST(
         ),
       });
 
+      // Only a regrade that actually changes the score counts as "changed"
+      // — carry the prior value forward so the grid can show it, even
+      // across a reload, until a later regrade leaves it unchanged again
+      // or the instructor manually overrides it.
+      const priorScore = job.answer.grade?.score ?? null;
+      const previousScore =
+        priorScore !== null && priorScore !== result.score ? priorScore : null;
+
       const grade = await prisma.grade.upsert({
         where: { answerId: job.answer.id },
         create: {
@@ -103,6 +111,7 @@ export async function POST(
           feedback: result.feedback,
           model: settings.model,
           gradedAt: new Date(),
+          previousScore,
         },
       });
 
@@ -119,6 +128,7 @@ export async function POST(
         answerId: job.answer.id,
         score: grade.score,
         feedback: grade.feedback,
+        previousScore: grade.previousScore,
       });
     } catch (err) {
       return NextResponse.json(
@@ -173,7 +183,12 @@ export async function POST(
   }
 
   const errors: string[] = [];
-  const results: { answerId: string; score: number; feedback: string }[] = [];
+  const results: {
+    answerId: string;
+    score: number;
+    feedback: string;
+    previousScore: number | null;
+  }[] = [];
 
   await mapWithConcurrency(batch, CONCURRENCY, async ({ student, answer, question }) => {
     try {
@@ -191,6 +206,12 @@ export async function POST(
         ),
       });
 
+      // Only a regrade that actually changes the score counts as "changed"
+      // — see the singleAnswerId path above for why this is persisted.
+      const priorScore = answer.grade?.score ?? null;
+      const previousScore =
+        priorScore !== null && priorScore !== result.score ? priorScore : null;
+
       await prisma.grade.upsert({
         where: { answerId: answer.id },
         create: {
@@ -206,6 +227,7 @@ export async function POST(
           feedback: result.feedback,
           model: settings.model,
           gradedAt: new Date(),
+          previousScore,
         },
       });
 
@@ -213,6 +235,7 @@ export async function POST(
         answerId: answer.id,
         score: result.score,
         feedback: result.feedback,
+        previousScore,
       });
     } catch (err) {
       errors.push(
@@ -308,6 +331,10 @@ export async function PATCH(
         maxScore: answer.question.maxScore,
         model: "manual",
         gradedAt: new Date(),
+        // A manual override resolves whatever the AI regraded it to —
+        // drop the "changed by regrade" indicator rather than leave it
+        // pointing at a now-irrelevant prior score.
+        previousScore: null,
       },
     });
 
@@ -315,6 +342,7 @@ export async function PATCH(
       answerId,
       score: grade.score,
       feedback: grade.feedback,
+      previousScore: grade.previousScore,
     });
   } catch (err) {
     return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });

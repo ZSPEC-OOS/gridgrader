@@ -4,7 +4,14 @@ import { useState } from "react";
 import { GradeCell } from "./GradeCell";
 import { CanvasTransferButton } from "./CanvasTransferButton";
 
-type Grade = { score: number; feedback: string } | null;
+type Grade = {
+  score: number;
+  feedback: string;
+  // The score this held before its most recent regrade, but only when
+  // that regrade actually changed it — persisted server-side so the
+  // "changed" indicator survives navigating away and back.
+  previousScore: number | null;
+} | null;
 
 type Question = {
   id: string;
@@ -55,29 +62,11 @@ export function GradeTable({
     done: number;
     total: number;
   } | null>(null);
-  // answerId -> the score it held immediately before its most recent
-  // regrade, but only when that regrade actually changed it — this drives
-  // the "changed" dot on the cell. Cleared once a later regrade (or manual
-  // edit) leaves the score unchanged, so it never goes stale.
-  const [scoreChanges, setScoreChanges] = useState<Record<string, number>>({});
 
   const totalMax = questions.reduce((s, q) => s + q.maxScore, 0);
 
-  function recordScoreChange(answerId: string, previousScore: number | null, newScore: number) {
-    setScoreChanges((prev) => {
-      if (previousScore !== null && newScore !== previousScore) {
-        return { ...prev, [answerId]: previousScore };
-      }
-      if (!(answerId in prev)) return prev;
-      const next = { ...prev };
-      delete next[answerId];
-      return next;
-    });
-  }
-
   async function handleRegrade(answerId: string) {
     setRegradingId(answerId);
-    const previousScore = grades[answerId]?.score ?? null;
     try {
       const res = await fetch(`/api/assignments/${assignmentId}/grade`, {
         method: "POST",
@@ -88,9 +77,12 @@ export function GradeTable({
       if (!res.ok) throw new Error(data.error ?? "Regrade failed.");
       setGrades((prev) => ({
         ...prev,
-        [answerId]: { score: data.score, feedback: data.feedback },
+        [answerId]: {
+          score: data.score,
+          feedback: data.feedback,
+          previousScore: data.previousScore,
+        },
       }));
-      recordScoreChange(answerId, previousScore, data.score);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Regrade failed.");
     } finally {
@@ -101,15 +93,6 @@ export function GradeTable({
   async function handleRegradeQuestion(questionId: string) {
     setRegradingQuestionId(questionId);
     setQuestionRegradeProgress({ done: 0, total: 0 });
-
-    // Snapshot every affected answer's score before the run starts, so the
-    // "changed" indicator reflects the net effect of this regrade rather
-    // than an intermediate value from partway through a multi-batch run.
-    const previousScores = new Map<string, number | null>();
-    for (const student of students) {
-      const answer = student.answers.find((a) => a.questionId === questionId);
-      if (answer) previousScores.set(answer.id, grades[answer.id]?.score ?? null);
-    }
 
     let offset = 0;
     let gradedTotal = 0;
@@ -131,20 +114,26 @@ export function GradeTable({
         if (!res.ok) throw new Error(data.error ?? "Regrade failed.");
 
         const results = data.results as
-          | { answerId: string; score: number; feedback: string }[]
+          | {
+              answerId: string;
+              score: number;
+              feedback: string;
+              previousScore: number | null;
+            }[]
           | undefined;
 
         if (results?.length) {
           setGrades((prev) => {
             const next = { ...prev };
             for (const r of results) {
-              next[r.answerId] = { score: r.score, feedback: r.feedback };
+              next[r.answerId] = {
+                score: r.score,
+                feedback: r.feedback,
+                previousScore: r.previousScore,
+              };
             }
             return next;
           });
-          for (const r of results) {
-            recordScoreChange(r.answerId, previousScores.get(r.answerId) ?? null, r.score);
-          }
         }
 
         gradedTotal += data.graded;
@@ -183,16 +172,14 @@ export function GradeTable({
       if (!res.ok) throw new Error(data.error ?? "Save failed.");
       setGrades((prev) => ({
         ...prev,
-        [answerId]: { score: data.score, feedback: data.feedback },
+        [answerId]: {
+          score: data.score,
+          feedback: data.feedback,
+          // The server clears previousScore on a manual override — carry
+          // that through so the indicator drops immediately.
+          previousScore: data.previousScore,
+        },
       }));
-      // A manual override resolves whatever the AI regraded it to — drop
-      // the "changed by regrade" indicator rather than leave it stale.
-      setScoreChanges((prev) => {
-        if (!(answerId in prev)) return prev;
-        const next = { ...prev };
-        delete next[answerId];
-        return next;
-      });
     } catch (err) {
       alert(err instanceof Error ? err.message : "Save failed.");
     } finally {
@@ -310,7 +297,7 @@ export function GradeTable({
                             editMode={editMode}
                             regrading={regradingId === answer.id}
                             saving={savingId === answer.id}
-                            changedFrom={scoreChanges[answer.id] ?? null}
+                            changedFrom={grade?.previousScore ?? null}
                             onRegrade={() => handleRegrade(answer.id)}
                             onManualEdit={(score) => handleManualEdit(answer.id, score)}
                           />

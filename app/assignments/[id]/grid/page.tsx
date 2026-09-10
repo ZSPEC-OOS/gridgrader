@@ -58,7 +58,11 @@ export default async function GridPage({
             id: a.id,
             questionId: a.questionId,
             grade: a.grade
-              ? { score: a.grade.score, feedback: a.grade.feedback }
+              ? {
+                  score: a.grade.score,
+                  feedback: a.grade.feedback,
+                  previousScore: a.grade.previousScore,
+                }
               : null,
           })),
         }))}

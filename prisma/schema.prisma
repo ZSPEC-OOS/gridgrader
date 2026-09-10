@@ -74,6 +74,11 @@ model Grade {
   feedback String
   model    String
   gradedAt DateTime @default(now())
+  // Set to the prior score only when a regrade actually changed it; null
+  // otherwise (never regraded, last regrade left it unchanged, or an
+  // instructor's manual override superseded it). Drives the persistent
+  // "changed" indicator on the grading grid.
+  previousScore Float?
 }
 
 model Settings {
