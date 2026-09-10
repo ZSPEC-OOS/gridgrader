@@ -23,6 +23,8 @@ type Student = {
   }[];
 };
 
+const REGRADE_QUESTION_BATCH_SIZE = 40;
+
 export function GradeTable({
   assignmentId,
   assignmentName,
@@ -48,11 +50,34 @@ export function GradeTable({
   const [editMode, setEditMode] = useState(false);
   const [regradingId, setRegradingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [regradingQuestionId, setRegradingQuestionId] = useState<string | null>(null);
+  const [questionRegradeProgress, setQuestionRegradeProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  // answerId -> the score it held immediately before its most recent
+  // regrade, but only when that regrade actually changed it — this drives
+  // the "changed" dot on the cell. Cleared once a later regrade (or manual
+  // edit) leaves the score unchanged, so it never goes stale.
+  const [scoreChanges, setScoreChanges] = useState<Record<string, number>>({});
 
   const totalMax = questions.reduce((s, q) => s + q.maxScore, 0);
 
+  function recordScoreChange(answerId: string, previousScore: number | null, newScore: number) {
+    setScoreChanges((prev) => {
+      if (previousScore !== null && newScore !== previousScore) {
+        return { ...prev, [answerId]: previousScore };
+      }
+      if (!(answerId in prev)) return prev;
+      const next = { ...prev };
+      delete next[answerId];
+      return next;
+    });
+  }
+
   async function handleRegrade(answerId: string) {
     setRegradingId(answerId);
+    const previousScore = grades[answerId]?.score ?? null;
     try {
       const res = await fetch(`/api/assignments/${assignmentId}/grade`, {
         method: "POST",
@@ -65,10 +90,84 @@ export function GradeTable({
         ...prev,
         [answerId]: { score: data.score, feedback: data.feedback },
       }));
+      recordScoreChange(answerId, previousScore, data.score);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Regrade failed.");
     } finally {
       setRegradingId(null);
+    }
+  }
+
+  async function handleRegradeQuestion(questionId: string) {
+    setRegradingQuestionId(questionId);
+    setQuestionRegradeProgress({ done: 0, total: 0 });
+
+    // Snapshot every affected answer's score before the run starts, so the
+    // "changed" indicator reflects the net effect of this regrade rather
+    // than an intermediate value from partway through a multi-batch run.
+    const previousScores = new Map<string, number | null>();
+    for (const student of students) {
+      const answer = student.answers.find((a) => a.questionId === questionId);
+      if (answer) previousScores.set(answer.id, grades[answer.id]?.score ?? null);
+    }
+
+    let offset = 0;
+    let gradedTotal = 0;
+    let total = 0;
+    const allErrors: string[] = [];
+
+    try {
+      for (;;) {
+        const res = await fetch(`/api/assignments/${assignmentId}/grade`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            questionId,
+            offset,
+            limit: REGRADE_QUESTION_BATCH_SIZE,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Regrade failed.");
+
+        const results = data.results as
+          | { answerId: string; score: number; feedback: string }[]
+          | undefined;
+
+        if (results?.length) {
+          setGrades((prev) => {
+            const next = { ...prev };
+            for (const r of results) {
+              next[r.answerId] = { score: r.score, feedback: r.feedback };
+            }
+            return next;
+          });
+          for (const r of results) {
+            recordScoreChange(r.answerId, previousScores.get(r.answerId) ?? null, r.score);
+          }
+        }
+
+        gradedTotal += data.graded;
+        total = data.total;
+        allErrors.push(...data.errors);
+        setQuestionRegradeProgress({ done: Math.min(offset + data.limit, total), total });
+
+        if (data.done) break;
+        offset = data.offset + data.limit;
+      }
+
+      if (allErrors.length > 0) {
+        const preview = allErrors.slice(0, 5).join("\n");
+        const more = allErrors.length > 5 ? `\n…and ${allErrors.length - 5} more` : "";
+        alert(
+          `Regraded ${gradedTotal} of ${total}. ${allErrors.length} failed:\n${preview}${more}`
+        );
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Regrade failed.");
+    } finally {
+      setRegradingQuestionId(null);
+      setQuestionRegradeProgress(null);
     }
   }
 
@@ -86,6 +185,14 @@ export function GradeTable({
         ...prev,
         [answerId]: { score: data.score, feedback: data.feedback },
       }));
+      // A manual override resolves whatever the AI regraded it to — drop
+      // the "changed by regrade" indicator rather than leave it stale.
+      setScoreChanges((prev) => {
+        if (!(answerId in prev)) return prev;
+        const next = { ...prev };
+        delete next[answerId];
+        return next;
+      });
     } catch (err) {
       alert(err instanceof Error ? err.message : "Save failed.");
     } finally {
@@ -140,11 +247,30 @@ export function GradeTable({
                 Student
               </th>
               {questions.map((q) => (
-                <th key={q.id} className="px-4 py-3 whitespace-nowrap">
-                  {q.header}
-                  <span className="ml-1 font-normal normal-case text-neutral-400 dark:text-muted">
-                    ({q.maxScore} pts)
-                  </span>
+                <th key={q.id} className="px-4 py-3 align-top">
+                  {/* Question text stays on its own line so the regrade-all
+                      button (shown only in regrade mode, on the line below)
+                      never shifts or wraps the header text itself. */}
+                  <div className="whitespace-nowrap">
+                    {q.header}
+                    <span className="ml-1 font-normal normal-case text-neutral-400 dark:text-muted">
+                      ({q.maxScore} pts)
+                    </span>
+                  </div>
+                  {regradeMode && (
+                    <button
+                      onClick={() => handleRegradeQuestion(q.id)}
+                      disabled={regradingQuestionId === q.id}
+                      title="Regrade this question for every student"
+                      className="mt-1.5 whitespace-nowrap rounded border border-neutral-300 px-2 py-0.5 text-[10px] font-normal normal-case text-neutral-500 hover:border-brand-maroon hover:text-brand-maroon disabled:opacity-50 dark:border-border dark:text-muted dark:hover:border-brand-crimson dark:hover:text-brand-crimson"
+                    >
+                      {regradingQuestionId === q.id
+                        ? questionRegradeProgress && questionRegradeProgress.total > 0
+                          ? `Regrading ${questionRegradeProgress.done}/${questionRegradeProgress.total}…`
+                          : "Regrading…"
+                        : "↻ Regrade all"}
+                    </button>
+                  )}
                 </th>
               ))}
               <th className="px-4 py-3 whitespace-nowrap">Total</th>
@@ -184,6 +310,7 @@ export function GradeTable({
                             editMode={editMode}
                             regrading={regradingId === answer.id}
                             saving={savingId === answer.id}
+                            changedFrom={scoreChanges[answer.id] ?? null}
                             onRegrade={() => handleRegrade(answer.id)}
                             onManualEdit={(score) => handleManualEdit(answer.id, score)}
                           />

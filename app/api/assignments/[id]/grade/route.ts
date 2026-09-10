@@ -25,6 +25,8 @@ export async function POST(
   const body = await req.json().catch(() => ({}));
   const singleAnswerId =
     typeof body.answerId === "string" ? body.answerId : null;
+  const questionId =
+    typeof body.questionId === "string" ? body.questionId : null;
   const offset =
     Number.isFinite(body.offset) && body.offset >= 0
       ? Math.floor(body.offset)
@@ -131,11 +133,19 @@ export async function POST(
   // the raw `answers` array order, so offset-based paging can't skip or
   // duplicate an answer between requests.
   const questionById = new Map(assignment.questions.map((q) => [q.id, q]));
+  const questionsForBatch = questionId
+    ? assignment.questions.filter((q) => q.id === questionId)
+    : assignment.questions;
+
+  if (questionId && questionsForBatch.length === 0) {
+    return NextResponse.json({ error: "Question not found." }, { status: 404 });
+  }
+
   const answerJobs = assignment.students.flatMap((student) => {
     const answerByQuestion = new Map(
       student.answers.map((a) => [a.questionId, a])
     );
-    return assignment.questions
+    return questionsForBatch
       .map((q) => {
         const answer = answerByQuestion.get(q.id);
         return answer ? { student, answer, question: questionById.get(q.id)! } : null;
@@ -146,18 +156,24 @@ export async function POST(
   const total = answerJobs.length;
   const batch = answerJobs.slice(offset, offset + limit);
 
-  try {
-    if (offset === 0) {
-      await prisma.assignment.update({
-        where: { id },
-        data: { status: "GRADING" },
-      });
+  // A single-question regrade only ever touches answers the assignment
+  // already has grades for, so it never changes whether the assignment as
+  // a whole counts as graded — skip the status churn a full run does.
+  if (!questionId) {
+    try {
+      if (offset === 0) {
+        await prisma.assignment.update({
+          where: { id },
+          data: { status: "GRADING" },
+        });
+      }
+    } catch (err) {
+      return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
     }
-  } catch (err) {
-    return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
   }
 
   const errors: string[] = [];
+  const results: { answerId: string; score: number; feedback: string }[] = [];
 
   await mapWithConcurrency(batch, CONCURRENCY, async ({ student, answer, question }) => {
     try {
@@ -192,6 +208,12 @@ export async function POST(
           gradedAt: new Date(),
         },
       });
+
+      results.push({
+        answerId: answer.id,
+        score: result.score,
+        feedback: result.feedback,
+      });
     } catch (err) {
       errors.push(
         `${student.name} / ${question.header}: ${
@@ -203,7 +225,7 @@ export async function POST(
 
   const done = offset + limit >= total;
 
-  if (done) {
+  if (!questionId && done) {
     try {
       const gradedCount = await prisma.grade.count({
         where: { answer: { student: { assignmentId: id } } },
@@ -224,6 +246,7 @@ export async function POST(
     graded: batch.length - errors.length,
     failed: errors.length,
     errors,
+    results,
     offset,
     limit,
     total,
