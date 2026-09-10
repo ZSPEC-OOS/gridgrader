@@ -224,7 +224,15 @@
         render();
 
         if (state.pkg) {
-          refreshCanvasStatus(render);
+          refreshCanvasStatus(function () {
+            // Preload the dropdown to whichever remaining student's name
+            // exactly matches whatever Canvas is already showing, so
+            // opening the popup is "confirm this looks right," not "go
+            // find the right name in a 164-student list" — same
+            // exact-match-only rule as the post-navigation case.
+            autoSelectStudentMatchingCanvas();
+            render();
+          });
         }
       }
     );
