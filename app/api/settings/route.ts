@@ -9,6 +9,7 @@ import {
 
 const SETTINGS_ID = 1;
 const MIN_PIN_LENGTH = 4;
+const KNOWN_PROVIDERS = new Set(["openai", "deepseek"]);
 
 export async function GET() {
   try {
@@ -50,7 +51,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const provider = typeof body.provider === "string" ? body.provider : "openai";
+  const provider =
+    typeof body.provider === "string" && KNOWN_PROVIDERS.has(body.provider)
+      ? body.provider
+      : "openai";
   const model = typeof body.model === "string" && body.model.trim()
     ? body.model.trim()
     : "gpt-4o-mini";
