@@ -266,12 +266,12 @@ export async function PATCH(
   const body = await req.json().catch(() => ({}));
 
   const answerId = typeof body.answerId === "string" ? body.answerId : null;
-  const score = Number(body.score);
+  const score = body.score;
 
   if (!answerId) {
     return NextResponse.json({ error: "answerId is required." }, { status: 400 });
   }
-  if (!Number.isFinite(score)) {
+  if (typeof score !== "number" || !Number.isFinite(score)) {
     return NextResponse.json(
       { error: "Score must be a finite number." },
       { status: 400 }

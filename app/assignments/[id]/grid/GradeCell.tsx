@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatScore } from "@/lib/scoring";
+import { formatScore, matchAllowedScore } from "@/lib/scoring";
 
 export function GradeCell({
   score,
@@ -39,12 +39,8 @@ export function GradeCell({
 
   async function handleScoreClick() {
     if (editMode) {
-      const currentIsAllowed =
-        score !== null &&
-        allowedScores.some((allowed) => Math.abs(allowed - score) <= 1e-6);
-      setDraft(
-        String(currentIsAllowed ? score : (allowedScores[0] ?? 0))
-      );
+      const current = score === null ? null : matchAllowedScore(score, allowedScores);
+      setDraft(current === null ? "" : String(current));
       setEditing(true);
       return;
     }
@@ -78,6 +74,7 @@ export function GradeCell({
           disabled={saving}
           className="w-20 rounded border border-neutral-300 px-1.5 py-1 text-xs dark:border-border dark:bg-surface-muted dark:text-foreground"
         >
+          <option value="" disabled>Choose score</option>
           {allowedScores.map((allowed) => (
             <option key={allowed} value={allowed}>
               {formatScore(allowed)}

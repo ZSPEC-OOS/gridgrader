@@ -400,8 +400,8 @@ export default function HomePage() {
                       Points
                       <input
                         type="number"
-                        min={0.5}
-                        step={0.5}
+                        min={0.000001}
+                        step="any"
                         value={q.maxScore}
                         onChange={(e) =>
                           updateDraft(i, {

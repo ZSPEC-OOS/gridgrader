@@ -52,6 +52,7 @@ async function main() {
     // lands a value a real read of `.value` will see.
     const firstInput = adapter.getQuestionTargets()[0].input;
     adapter.setScore(firstInput, 1.5);
+    const valueAfterFirstWrite = firstInput.value;
 
     let sawInputEvent = false;
     let sawChangeEvent = false;
@@ -73,7 +74,7 @@ async function main() {
       compatible,
       studentName,
       targets,
-      valueAfterFirstWrite: "1.5", // asserted via the initial write below
+      valueAfterFirstWrite,
       valueAfterSecondWrite: firstInput.value,
       sawInputEvent,
       sawChangeEvent,
@@ -96,6 +97,7 @@ async function main() {
     ],
     "getQuestionTargets() order, maxScore extraction, and input identity"
   );
+  assert.equal(result.valueAfterFirstWrite, "1.5", "setScore preserves fractional values");
   assert.equal(result.valueAfterSecondWrite, "2", "setScore wrote the expected value");
   assert.equal(result.sawInputEvent, true, "setScore dispatched an input event");
   assert.equal(result.sawChangeEvent, true, "setScore dispatched a change event");

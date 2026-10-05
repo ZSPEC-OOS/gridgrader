@@ -7,7 +7,7 @@ export default defineConfig({
     // extension/ is a standalone plain-JS project with its own test
     // runner (`node --test`, run via `npm test` inside extension/) — see
     // extension/README.md. It isn't part of this Vitest suite.
-    exclude: ["**/node_modules/**", "extension/**"],
+    exclude: ["**/node_modules/**", "extension/**", "scripts/test/**"],
   },
   resolve: {
     alias: {

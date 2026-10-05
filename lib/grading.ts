@@ -105,19 +105,17 @@ Always respond with a single JSON object of the form {"score": number, "feedback
   const raw = response.choices[0]?.message?.content ?? "{}";
   const parsed = parseModelJson(raw);
 
-  const score = Number(parsed.score);
-  if (!Number.isFinite(score)) {
+  const score = parsed.score;
+  if (typeof score !== "number" || !Number.isFinite(score)) {
     throw new Error(`Model returned a non-numeric score: ${raw}`);
   }
 
   const feedback =
     typeof parsed.feedback === "string" ? parsed.feedback : "";
 
-  const clamped = Math.min(Math.max(score, 0), maxScore);
-
   // Never silently round an unauthorized partial score into a different
   // grade. The rubric-derived allowed set is the grading contract.
-  const finalScore = matchAllowedScore(clamped, allowedScores);
+  const finalScore = matchAllowedScore(score, allowedScores);
   if (finalScore === null) {
     throw new Error(
       `Model returned unauthorized score ${formatScore(score)}. Allowed scores: ${allowedScoreText}.`
