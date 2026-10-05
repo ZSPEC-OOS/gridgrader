@@ -250,3 +250,18 @@ test("runGoToStudent does not click prev when it's not available (e.g. first stu
   assert.equal(result.reason, "not_available");
   assert.equal(nav.prevCalls.length, 0);
 });
+
+test("decimal maxima and grades are written and verified without rounding", () => {
+  const targets = [{ index: 0, input: fakeInput(), maxScore: 1.5 }, { index: 1, input: fakeInput(), maxScore: 0.25 }];
+  const adapter = makeAdapter({ targets });
+  const result = runSendGrades(adapter, normalize, {
+    selectedStudent: { id: "s1", name: "Alice Smith", answers: [
+      { questionIndex: 0, score: 0.5, maxScore: 1.5 },
+      { questionIndex: 1, score: 0.25, maxScore: 0.25 },
+    ] },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(targets[0].input.value, "0.5");
+  assert.equal(targets[1].input.value, "0.25");
+  assert.equal(result.updateScoresClicked, true);
+});

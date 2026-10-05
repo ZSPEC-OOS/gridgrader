@@ -158,11 +158,12 @@ export default function EditAssignmentPage({
                   Points
                   <input
                     type="number"
-                    min={1}
+                    min={0.000001}
+                    step="any"
                     value={q.maxScore}
                     onChange={(e) =>
                       updateQuestion(q.id, {
-                        maxScore: Number(e.target.value) || 1,
+                        maxScore: Number(e.target.value) || 0.5,
                       })
                     }
                     className="w-16 rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"

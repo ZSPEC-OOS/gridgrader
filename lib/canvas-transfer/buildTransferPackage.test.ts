@@ -119,3 +119,15 @@ describe("buildTransferPackage", () => {
     expect(pkg.exportedAt).toBe("2026-01-01T00:00:00.000Z");
   });
 });
+
+it("preserves fractional maxima and grades through JSON transport", () => {
+  const pkg = buildTransferPackage({
+    assignmentId: "decimal", assignmentName: "Fractional quiz",
+    questions: [{ id: "q1", index: 0, header: "X", maxScore: 1.5 }, { id: "q2", index: 1, header: "Y", maxScore: 0.25 }],
+    students: [{ id: "s1", name: "Alice", answers: [{ id: "a1", questionId: "q1" }, { id: "a2", questionId: "q2" }] }],
+    grades: { a1: { score: 0.5 }, a2: { score: 0.25 } },
+  });
+  const decoded = JSON.parse(JSON.stringify(pkg));
+  expect(decoded.questions.map((q: { maxScore: number }) => q.maxScore)).toEqual([1.5, 0.25]);
+  expect(decoded.students[0].answers.map((a: { score: number }) => a.score)).toEqual([0.5, 0.25]);
+});

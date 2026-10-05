@@ -50,9 +50,17 @@ key before using **Grade**.
 
 1. Provision a Postgres database (Vercel Postgres, Neon, Supabase, etc.)
    and set `DATABASE_URL` in the project's environment variables.
-2. Run `npx prisma migrate deploy` against that database (e.g. from CI, or
-   locally with `DATABASE_URL` pointed at the prod database) before/while
-   deploying.
+2. `vercel.json` selects `npm run build:vercel`. On production deployments
+   (`VERCEL_ENV=production`), this runs `prisma migrate deploy` and aborts
+   on failure **before** `next build`. Vercel only promotes the resulting
+   deployment after the build succeeds, so new code never serves against
+   the old integer column. Use a direct, migration-capable PostgreSQL URL
+   with DDL privileges for `DATABASE_URL`. Do not use `prisma db push`.
+   Preview deployments skip production migrations: use a separate preview
+   database and apply `prisma migrate deploy` there before testing.
+   For deployments outside Vercel, run `prisma migrate deploy` before
+   starting/promoting the new application. The additive Float migration
+   remains compatible with old integer-valued app instances.
 3. Deploy the app to Vercel as usual. The AI model's API key is entered
    through the in-app Settings page (stored in the database) rather than
    as an environment variable, so it can be changed without a redeploy.
@@ -73,3 +81,31 @@ move grading to a background job — it is currently a synchronous request.
   use.
 - Grading a very large roster in one request may exceed serverless time
   limits; see above.
+
+## Fractional scores
+
+Question maxima accept positive decimals. A decimal maximum does not enable
+partial credit: a generic answer key permits only zero and full credit.
+AI output and manual overrides use the same server-enforced allowed set.
+Existing saved grades are preserved; new grading follows this rubric policy.
+
+Write numeric directives as separate sentences, lines, or semicolon-separated
+clauses, for example `1 point for X; 0.5 points for Y` for a 1.5-point question.
+These independent allocations permit 0, 0.5, 1, and 1.5. `Award 0.5 points
+for a partially correct answer` is a scoring level, not an additive component.
+`1 point for each of three observations` permits three increments; repeated
+allocations need an explicit count. Negations, deductions, quoted examples,
+unnumbered partial/half credit, and ambiguous prose do not authorize amounts.
+Alternative levels (if/when/or) are not added together. Unrecognized or overly
+complex rubrics conservatively fall back to zero/full credit; check the allowed
+values in the manual override menu. Expansion is capped at 64 components and
+256 distinct scores.
+
+Run `npm test`, `(cd extension && npm test)`, `npm run lint`, and
+`npm run typecheck`. With a disposable migrated PostgreSQL database in
+`DATABASE_URL`, run `npm run test:deployment` to test the migration and
+deployment ordering. After `npm run build`, `npm run test:browser` runs
+production UI/API regression scenarios and cleans up its synthetic assignments.
+The browser suite requires Playwright resolvable by Node and Chromium installed;
+set `CHROMIUM_EXECUTABLE_PATH` if using a system Chromium. It starts its own
+loopback server on port 3101; use a test database, never production credentials.
