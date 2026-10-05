@@ -22,7 +22,7 @@ const baseParams = {
   apiKey: "sk-test",
   model: "gpt-4o-mini",
   questionHeader: "Define mitosis",
-  criteria: "1 point: mentions cell division.",
+  criteria: "1 point for each of ten required elements.",
   maxScore: 10,
   answerText: "Cell division producing two daughter cells.",
 };
@@ -121,11 +121,54 @@ describe("score normalization", () => {
     expect(result.score).toBe(0);
   });
 
-  it("rounds fractional model output to a whole number", async () => {
-    createMock.mockResolvedValue(mockResponse(7.4));
-    const result = await gradeAnswer({ ...baseParams });
-    expect(result.score).toBe(7);
-    expect(Number.isInteger(result.score)).toBe(true);
+  it("rejects a fractional score that the answer key did not authorize", async () => {
+    createMock.mockResolvedValue(mockResponse(0.5));
+
+    await expect(
+      gradeAnswer({
+        ...baseParams,
+        criteria: "Correct answer earns full credit.",
+        maxScore: 1.5,
+      })
+    ).rejects.toThrow(/unauthorized score/i);
+  });
+
+  it("accepts a decimal full-credit score", async () => {
+    createMock.mockResolvedValue(mockResponse(1.5));
+
+    const result = await gradeAnswer({
+      ...baseParams,
+      criteria: "Correct answer earns full credit.",
+      maxScore: 1.5,
+    });
+
+    expect(result.score).toBe(1.5);
+  });
+
+  it("accepts partial credit when the answer key explicitly authorizes it", async () => {
+    createMock.mockResolvedValue(mockResponse(0.5));
+
+    const result = await gradeAnswer({
+      ...baseParams,
+      criteria: "Award 0.5 points for a partially correct answer.",
+      maxScore: 1.5,
+    });
+
+    expect(result.score).toBe(0.5);
+  });
+
+  it("tells the model that a decimal maximum is all-or-nothing by default", async () => {
+    createMock.mockResolvedValue(mockResponse(1.5));
+
+    await gradeAnswer({
+      ...baseParams,
+      criteria: "Correct answer earns full credit.",
+      maxScore: 1.5,
+    });
+    const system = createMock.mock.calls[0][0].messages[0].content;
+
+    expect(system).toContain("only permitted scores are 0, 1.5");
+    expect(system).toContain("does not by itself authorize partial credit");
   });
 });
 

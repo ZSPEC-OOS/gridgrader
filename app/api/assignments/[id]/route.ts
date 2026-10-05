@@ -93,7 +93,7 @@ export async function PATCH(
               criteria: q.criteria ?? "",
               maxScore:
                 Number.isFinite(q.maxScore) && q.maxScore > 0
-                  ? Math.round(q.maxScore)
+                  ? q.maxScore
                   : 10,
             },
           })
