@@ -109,3 +109,11 @@ production UI/API regression scenarios and cleans up its synthetic assignments.
 The browser suite requires Playwright resolvable by Node and Chromium installed;
 set `CHROMIUM_EXECUTABLE_PATH` if using a system Chromium. It starts its own
 loopback server on port 3101; use a test database, never production credentials.
+
+Production deployment also handles legacy databases created without Prisma history.
+`migrate:production` first compares such a database with the frozen pre-fractional
+schema. Only an exact match can baseline the seven historical migrations; the
+fractional migration stays pending and is applied by `prisma migrate deploy`.
+A mismatched untracked schema aborts deployment without marking any migration.
+Fresh databases and databases with normal migration history use ordinary deploy.
+Interrupted baselining rechecks the schema and resumes missing history entries.

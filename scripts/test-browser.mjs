@@ -68,6 +68,21 @@ try {
     assert.equal(edited.questions[0].maxScore, max + 0.125);
     await page.goto(`${base}/assignments/${id}/edit`);
     assert.equal(await page.locator('input[type="number"]').first().inputValue(), String(max + 0.125));
+    // Exercise the exact edit form and Save changes button, not just PATCH.
+    await page.locator('input[type="number"]').first().fill("1.5");
+    const formSave = page.waitForResponse(r => r.url().endsWith(`/api/assignments/${id}`) && r.request().method() === "PATCH");
+    await page.getByRole("button", { name: "Save changes", exact: true }).click();
+    const saveResponse = await formSave;
+    assert.equal(saveResponse.request().postDataJSON().questions[0].maxScore, 1.5);
+    assert.equal(saveResponse.status(), 200);
+    await page.waitForURL(`${base}/`);
+    const afterSave = await (await fetch(`${base}/api/assignments/${id}`)).json();
+    assert.equal(afterSave.questions[0].maxScore, 1.5);
+    await page.goto(`${base}/assignments/${id}/edit`);
+    assert.equal(await page.locator('input[type="number"]').first().inputValue(), "1.5");
+    await page.reload();
+    assert.equal(await page.locator('input[type="number"]').first().inputValue(), "1.5");
+
   }
   console.log("Production browser grading: 4 scenarios passed (allowed options, rejection, persistence, integer compatibility, decimal totals).");
 } finally {

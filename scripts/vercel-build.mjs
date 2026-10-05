@@ -13,6 +13,6 @@ if (process.env.VERCEL_ENV === "production") {
     console.error("DATABASE_URL is required for production migrations.");
     process.exit(1);
   }
-  run(["exec", "--", "prisma", "migrate", "deploy"]);
+  run(["run", "migrate:production"]);
 }
 run(["run", "build"]);
