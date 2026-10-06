@@ -36,7 +36,7 @@ model Question {
   index      Int
   header     String
   criteria   String?
-  maxScore   Float      @default(10)
+  maxScore   Int        @default(10)
   answers    Answer[]
 
   @@unique([assignmentId, index])

@@ -4,7 +4,6 @@ import { gradeAnswer } from "@/lib/grading";
 import { mapWithConcurrency } from "@/lib/concurrency";
 import { toErrorMessage } from "@/lib/apiError";
 import { resolveGradingStrictnessLevel } from "@/lib/gradingStrictness";
-import { formatScore, getAllowedScores, matchAllowedScore } from "@/lib/scoring";
 
 const CONCURRENCY = 8;
 const DEFAULT_BATCH_SIZE = 40;
@@ -256,8 +255,8 @@ export async function POST(
 }
 
 // Manual override: the instructor sets an exact score directly, bypassing
-// the AI entirely. The same rubric-derived allowed-score policy still
-// applies so a decimal question maximum does not silently enable partial credit.
+// the AI entirely. No partial credit is enforced here the same way it is
+// for AI grading — the score must be a whole number, never a fraction.
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -266,14 +265,14 @@ export async function PATCH(
   const body = await req.json().catch(() => ({}));
 
   const answerId = typeof body.answerId === "string" ? body.answerId : null;
-  const score = body.score;
+  const score = Number(body.score);
 
   if (!answerId) {
     return NextResponse.json({ error: "answerId is required." }, { status: 400 });
   }
-  if (typeof score !== "number" || !Number.isFinite(score)) {
+  if (!Number.isInteger(score)) {
     return NextResponse.json(
-      { error: "Score must be a finite number." },
+      { error: "Score must be a whole number — no half points." },
       { status: 400 }
     );
   }
@@ -288,18 +287,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Answer not found." }, { status: 404 });
     }
 
-    const allowedScores = getAllowedScores(
-      answer.question.criteria ?? "",
-      answer.question.maxScore
-    );
-    const normalizedScore = matchAllowedScore(score, allowedScores);
-    if (normalizedScore === null) {
+    if (score < 0 || score > answer.question.maxScore) {
       return NextResponse.json(
-        {
-          error:
-            `Score must be one of ${allowedScores.map(formatScore).join(", ")} ` +
-            "based on the answer key.",
-        },
+        { error: `Score must be between 0 and ${answer.question.maxScore}.` },
         { status: 400 }
       );
     }
@@ -308,13 +298,13 @@ export async function PATCH(
       where: { answerId },
       create: {
         answerId,
-        score: normalizedScore,
+        score,
         maxScore: answer.question.maxScore,
         feedback: "Manually set by instructor.",
         model: "manual",
       },
       update: {
-        score: normalizedScore,
+        score,
         maxScore: answer.question.maxScore,
         model: "manual",
         gradedAt: new Date(),

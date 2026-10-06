@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { formatScore, matchAllowedScore } from "@/lib/scoring";
 
 export function GradeCell({
   score,
   maxScore,
-  allowedScores,
   feedback,
   regradeMode,
   copyMode,
@@ -19,7 +17,6 @@ export function GradeCell({
 }: {
   score: number | null;
   maxScore: number;
-  allowedScores: number[];
   feedback: string | null;
   regradeMode: boolean;
   copyMode: boolean;
@@ -39,8 +36,7 @@ export function GradeCell({
 
   async function handleScoreClick() {
     if (editMode) {
-      const current = score === null ? null : matchAllowedScore(score, allowedScores);
-      setDraft(current === null ? "" : String(current));
+      setDraft(score !== null ? String(Math.round(score)) : "0");
       setEditing(true);
       return;
     }
@@ -58,31 +54,41 @@ export function GradeCell({
     }
   }
 
+  function commitEdit() {
+    const parsed = Number(draft);
+    if (
+      !Number.isInteger(parsed) ||
+      parsed < 0 ||
+      parsed > maxScore
+    ) {
+      alert(`Enter a whole number between 0 and ${maxScore}.`);
+      return;
+    }
+    setEditing(false);
+    onManualEdit(parsed);
+  }
+
   if (editing) {
     return (
       <div className="flex items-center gap-1">
-        <select
+        <input
+          type="number"
+          step={1}
+          min={0}
+          max={maxScore}
           autoFocus
           value={draft}
-          onChange={(e) => {
-            const parsed = Number(e.target.value);
-            setDraft(e.target.value);
-            setEditing(false);
-            onManualEdit(parsed);
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitEdit();
+            if (e.key === "Escape") setEditing(false);
           }}
-          onBlur={() => setEditing(false)}
+          onBlur={commitEdit}
           disabled={saving}
-          className="w-20 rounded border border-neutral-300 px-1.5 py-1 text-xs dark:border-border dark:bg-surface-muted dark:text-foreground"
-        >
-          <option value="" disabled>Choose score</option>
-          {allowedScores.map((allowed) => (
-            <option key={allowed} value={allowed}>
-              {formatScore(allowed)}
-            </option>
-          ))}
-        </select>
+          className="w-16 rounded border border-neutral-300 px-1.5 py-1 text-xs dark:border-border dark:bg-surface-muted dark:text-foreground"
+        />
         <span className="text-xs text-neutral-400 dark:text-muted">
-          / {formatScore(maxScore)}
+          / {maxScore}
         </span>
       </div>
     );
@@ -106,9 +112,9 @@ export function GradeCell({
           disabled={saving || (score === null && !editMode)}
           title={
             changedFrom !== null
-              ? `Changed by regrade: ${formatScore(changedFrom)} → ${score === null ? "—" : formatScore(score)}`
+              ? `Changed by regrade: ${changedFrom} → ${score}`
               : editMode
-                ? `Click to set this score manually. Allowed: ${allowedScores.map(formatScore).join(", ")}`
+                ? "Click to set this score manually"
                 : copyMode && score !== null
                   ? "Click to copy"
                   : undefined
@@ -121,7 +127,9 @@ export function GradeCell({
               ? "Copied!"
               : score === null
                 ? "—"
-                : formatScore(score)}
+                : score % 1 === 0
+                  ? score
+                  : score.toFixed(1)}
         </button>
         {changedFrom !== null && (
           <span

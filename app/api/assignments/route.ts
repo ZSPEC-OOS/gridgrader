@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
             maxScore:
               Number.isFinite(criteriaList[i]?.maxScore) &&
               criteriaList[i].maxScore > 0
-                ? criteriaList[i].maxScore
+                ? Math.round(criteriaList[i].maxScore)
                 : 10,
           })),
         },
