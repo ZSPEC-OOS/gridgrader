@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { parseModelJson } from "./json";
-import { resolveScoreStep, roundToStep } from "./scoreStep";
+import { isAllOrNothing, resolveScoreStep, roundToStep } from "./scoreStep";
 import {
   getStrictnessGuidance,
   resolveGradingStrictnessLevel,
@@ -123,6 +123,9 @@ Always respond with a single JSON object of the form {"score": number, "feedback
 }
 
 function scorePolicy(maxScore: number, step: number): string {
+  if (isAllOrNothing(maxScore, step)) {
+    return `"score" must be either 0 or exactly ${maxScore} — this question is all-or-nothing, so never award any partial credit.`;
+  }
   if (step === 1) {
     return `"score" must be either a whole number between 0 and ${maxScore} or exactly ${maxScore} (full credit) — never award half points or any other fractional credit short of full marks.`;
   }

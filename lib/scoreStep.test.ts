@@ -18,9 +18,10 @@ describe("roundToStep", () => {
     expect(roundToStep(-3, 2, 0.5)).toBe(0);
     expect(roundToStep(9, 2, 0.5)).toBe(2);
   });
-  it("keeps a maximum that is not a multiple of the step", () => {
+  it("is all-or-nothing for a decimal maximum on whole-point grading", () => {
     expect(roundToStep(1.5, 1.5, 1)).toBe(1.5);
-    expect(roundToStep(1.4, 1.5, 1)).toBe(1);
+    expect(roundToStep(1, 1.5, 1)).toBe(1.5);
+    expect(roundToStep(0.5, 1.5, 1)).toBe(0);
   });
 });
 
@@ -30,6 +31,9 @@ describe("isAllowedScore", () => {
     expect(isAllowedScore(0.75, 1.5, 0.5)).toBe(false);
     expect(isAllowedScore(1.5, 1.5, 1)).toBe(true);
     expect(isAllowedScore(0.5, 1.5, 1)).toBe(false);
+    expect(isAllowedScore(1, 1.5, 1)).toBe(false);
+    expect(isAllowedScore(0, 1.5, 1)).toBe(true);
+    expect(isAllowedScore(7, 10, 1)).toBe(true);
     expect(isAllowedScore(2, 1.5, 0.5)).toBe(false);
   });
 });

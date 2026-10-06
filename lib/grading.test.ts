@@ -142,10 +142,13 @@ describe("score normalization", () => {
     expect(system).toContain("increments of 0.25");
   });
 
-  it("still rounds partial scores on a decimal question maximum", async () => {
-    createMock.mockResolvedValue(mockResponse(0.9));
+  it("treats a decimal maximum on whole-point grading as all-or-nothing", async () => {
+    createMock.mockResolvedValue(mockResponse(1));
     const result = await gradeAnswer({ ...baseParams, maxScore: 1.5 });
-    expect(result.score).toBe(1);
+    expect(result.score).toBe(1.5);
+    expect(createMock.mock.calls[0][0].messages[0].content).toContain("all-or-nothing");
+    createMock.mockResolvedValue(mockResponse(0.5));
+    expect((await gradeAnswer({ ...baseParams, maxScore: 1.5 })).score).toBe(0);
   });
 });
 
