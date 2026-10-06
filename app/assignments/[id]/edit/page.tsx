@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { ScoreStepPicker } from "@/app/ScoreStepPicker";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { parseJsonResponse } from "@/lib/apiClient";
@@ -11,6 +12,7 @@ type Question = {
   header: string;
   criteria: string | null;
   maxScore: number;
+  scoreStep: number;
 };
 
 type AssignmentDetail = {
@@ -78,6 +80,7 @@ export default function EditAssignmentPage({
             id: q.id,
             criteria: q.criteria ?? "",
             maxScore: q.maxScore,
+            scoreStep: q.scoreStep,
           })),
         }),
       });
@@ -158,18 +161,22 @@ export default function EditAssignmentPage({
                   Points
                   <input
                     type="number"
-                    min={0.000001}
+                    min={0.01}
                     step="any"
                     value={q.maxScore}
                     onChange={(e) =>
                       updateQuestion(q.id, {
-                        maxScore: Number(e.target.value) || 0.5,
+                        maxScore: Number(e.target.value) || 1,
                       })
                     }
                     className="w-16 rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
                   />
                 </label>
               </div>
+              <ScoreStepPicker
+                value={q.scoreStep}
+                onChange={(scoreStep) => updateQuestion(q.id, { scoreStep })}
+              />
               <textarea
                 value={q.criteria ?? ""}
                 onChange={(e) =>

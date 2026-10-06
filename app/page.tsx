@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ScoreStepPicker } from "./ScoreStepPicker";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { parseJsonResponse } from "@/lib/apiClient";
@@ -19,6 +20,7 @@ type DraftQuestion = {
   header: string;
   criteria: string;
   maxScore: number;
+  scoreStep: number;
 };
 
 const STATUS_LABEL: Record<AssignmentSummary["status"], string> = {
@@ -122,7 +124,7 @@ export default function HomePage() {
       }
 
       setDraftQuestions(
-        headers.map((header) => ({ header, criteria: "", maxScore: 10 }))
+        headers.map((header) => ({ header, criteria: "", maxScore: 10, scoreStep: 1 }))
       );
     } catch (err) {
       setDraftQuestions(null);
@@ -170,6 +172,7 @@ export default function HomePage() {
           header: q.header,
           criteria: q.criteria,
           maxScore: q.maxScore,
+          scoreStep: q.scoreStep,
         }))
       )
     );
@@ -400,18 +403,22 @@ export default function HomePage() {
                       Points
                       <input
                         type="number"
-                        min={0.000001}
+                        min={0.01}
                         step="any"
                         value={q.maxScore}
                         onChange={(e) =>
                           updateDraft(i, {
-                            maxScore: Number(e.target.value) || 0.5,
+                            maxScore: Number(e.target.value) || 1,
                           })
                         }
                         className="w-16 rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 dark:border-border dark:bg-surface-muted dark:text-foreground"
                       />
                     </label>
                   </div>
+                  <ScoreStepPicker
+                    value={q.scoreStep}
+                    onChange={(scoreStep) => updateDraft(i, { scoreStep })}
+                  />
                   <textarea
                     value={q.criteria}
                     onChange={(e) =>

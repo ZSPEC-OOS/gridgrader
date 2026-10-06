@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { GradeCell } from "./GradeCell";
 import { CanvasTransferButton } from "./CanvasTransferButton";
-import { formatScore, getAllowedScores } from "@/lib/scoring";
 
 type Grade = { score: number; feedback: string } | null;
 
@@ -11,8 +10,8 @@ type Question = {
   id: string;
   index: number;
   header: string;
-  criteria: string | null;
   maxScore: number;
+  scoreStep: number;
 };
 
 type Student = {
@@ -222,7 +221,7 @@ export function GradeTable({
         />
         {editMode && (
           <span className="text-xs text-neutral-500 dark:text-muted">
-            Click a score to set it directly. Available values come from the answer key; without explicit partial credit, only 0 or full credit is allowed.
+            Click a score to set it directly — in the increment set for that question (or full credit).
           </span>
         )}
       </div>
@@ -256,7 +255,7 @@ export function GradeTable({
                   <div className="whitespace-nowrap">
                     {q.header}
                     <span className="ml-1 font-normal normal-case text-neutral-400 dark:text-muted">
-                      ({formatScore(q.maxScore)} pts)
+                      ({q.maxScore} pts)
                     </span>
                   </div>
                   {regradeMode && (
@@ -306,10 +305,7 @@ export function GradeTable({
                           <GradeCell
                             score={grade?.score ?? null}
                             maxScore={q.maxScore}
-                            allowedScores={getAllowedScores(
-                              q.criteria ?? "",
-                              q.maxScore
-                            )}
+                            scoreStep={q.scoreStep}
                             feedback={grade?.feedback ?? null}
                             regradeMode={regradeMode}
                             copyMode={copyMode}
@@ -325,9 +321,7 @@ export function GradeTable({
                     );
                   })}
                   <td className="px-4 py-2 text-sm font-semibold">
-                    {anyGraded
-                      ? `${formatScore(total)} / ${formatScore(totalMax)}`
-                      : "—"}
+                    {anyGraded ? `${total.toFixed(1)} / ${Number(totalMax.toFixed(2))}` : "—"}
                   </td>
                 </tr>
               );

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveScoreStep } from "@/lib/scoreStep";
 import { prisma } from "@/lib/db";
 import { parseWorkbook } from "@/lib/parseWorkbook";
 import { toErrorMessage } from "@/lib/apiError";
@@ -32,6 +33,7 @@ type CriteriaInput = {
   header: string;
   criteria: string;
   maxScore: number;
+  scoreStep?: number;
 };
 
 export async function POST(req: NextRequest) {
@@ -100,6 +102,7 @@ export async function POST(req: NextRequest) {
               criteriaList[i].maxScore > 0
                 ? criteriaList[i].maxScore
                 : 10,
+            scoreStep: resolveScoreStep(criteriaList[i]?.scoreStep),
           })),
         },
         students: {

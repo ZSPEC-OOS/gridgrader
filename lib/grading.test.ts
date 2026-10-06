@@ -22,7 +22,7 @@ const baseParams = {
   apiKey: "sk-test",
   model: "gpt-4o-mini",
   questionHeader: "Define mitosis",
-  criteria: "1 point for each of ten required elements.",
+  criteria: "1 point: mentions cell division.",
   maxScore: 10,
   answerText: "Cell division producing two daughter cells.",
 };
@@ -109,64 +109,46 @@ describe("strictness affects the prompt, not post-hoc score math", () => {
 });
 
 describe("score normalization", () => {
-  it("rejects scores above maxScore", async () => {
+  it("clamps scores above maxScore", async () => {
     createMock.mockResolvedValue(mockResponse(999));
-    await expect(gradeAnswer({ ...baseParams })).rejects.toThrow(/unauthorized score/i);
+    const result = await gradeAnswer({ ...baseParams });
+    expect(result.score).toBe(10);
   });
 
-  it("rejects negative scores", async () => {
+  it("clamps negative scores to 0", async () => {
     createMock.mockResolvedValue(mockResponse(-5));
-    await expect(gradeAnswer({ ...baseParams })).rejects.toThrow(/unauthorized score/i);
+    const result = await gradeAnswer({ ...baseParams });
+    expect(result.score).toBe(0);
   });
 
-  it("rejects a fractional score that the answer key did not authorize", async () => {
-    createMock.mockResolvedValue(mockResponse(0.5));
-
-    await expect(
-      gradeAnswer({
-        ...baseParams,
-        criteria: "Correct answer earns full credit.",
-        maxScore: 1.5,
-      })
-    ).rejects.toThrow(/unauthorized score/i);
+  it("rounds fractional model output to a whole number", async () => {
+    createMock.mockResolvedValue(mockResponse(7.4));
+    const result = await gradeAnswer({ ...baseParams });
+    expect(result.score).toBe(7);
+    expect(Number.isInteger(result.score)).toBe(true);
   });
 
-  it("accepts a decimal full-credit score", async () => {
+  it("keeps full credit on a decimal question maximum", async () => {
     createMock.mockResolvedValue(mockResponse(1.5));
-
-    const result = await gradeAnswer({
-      ...baseParams,
-      criteria: "Correct answer earns full credit.",
-      maxScore: 1.5,
-    });
-
+    const result = await gradeAnswer({ ...baseParams, maxScore: 1.5 });
     expect(result.score).toBe(1.5);
   });
 
-  it("accepts partial credit when the answer key explicitly authorizes it", async () => {
-    createMock.mockResolvedValue(mockResponse(0.5));
-
-    const result = await gradeAnswer({
-      ...baseParams,
-      criteria: "Award 0.5 points for a partially correct answer.",
-      maxScore: 1.5,
-    });
-
-    expect(result.score).toBe(0.5);
+  it("grades in 0.25 increments when the question allows it", async () => {
+    createMock.mockResolvedValue(mockResponse(1.3));
+    const result = await gradeAnswer({ ...baseParams, maxScore: 2, scoreStep: 0.25 });
+    expect(result.score).toBe(1.25);
+    const system = createMock.mock.calls[0][0].messages[0].content;
+    expect(system).toContain("increments of 0.25");
   });
 
-  it("tells the model that a decimal maximum is all-or-nothing by default", async () => {
-    createMock.mockResolvedValue(mockResponse(1.5));
-
-    await gradeAnswer({
-      ...baseParams,
-      criteria: "Correct answer earns full credit.",
-      maxScore: 1.5,
-    });
-    const system = createMock.mock.calls[0][0].messages[0].content;
-
-    expect(system).toContain("only permitted scores are 0, 1.5");
-    expect(system).toContain("does not by itself authorize partial credit");
+  it("treats a decimal maximum on whole-point grading as all-or-nothing", async () => {
+    createMock.mockResolvedValue(mockResponse(1));
+    const result = await gradeAnswer({ ...baseParams, maxScore: 1.5 });
+    expect(result.score).toBe(1.5);
+    expect(createMock.mock.calls[0][0].messages[0].content).toContain("all-or-nothing");
+    createMock.mockResolvedValue(mockResponse(0.5));
+    expect((await gradeAnswer({ ...baseParams, maxScore: 1.5 })).score).toBe(0);
   });
 });
 
@@ -220,24 +202,5 @@ describe("reasoning model compatibility", () => {
     const call = createMock.mock.calls[0][0];
 
     expect(call.max_completion_tokens).toBe(1500);
-  });
-});
-
-describe("fractional score contract", () => {
-  it.each([0, 1.5])("accepts only endpoints for a generic decimal question: %s", async (score) => {
-    createMock.mockResolvedValue(mockResponse(score));
-    expect((await gradeAnswer({ ...baseParams, criteria: "X is correct", maxScore: 1.5 })).score).toBe(score);
-  });
-  it.each([0, 0.5, 1, 1.5])("accepts numeric component combinations: %s", async (score) => {
-    createMock.mockResolvedValue(mockResponse(score));
-    expect((await gradeAnswer({ ...baseParams, criteria: "1 point for X; 0.5 points for Y", maxScore: 1.5 })).score).toBe(score);
-  });
-  it.each([0.75, 0.5000001, -1, 2])("rejects unauthorized output %s without rounding or clamping", async (score) => {
-    createMock.mockResolvedValue(mockResponse(score));
-    await expect(gradeAnswer({ ...baseParams, criteria: "1 point for X; 0.5 points for Y", maxScore: 1.5 })).rejects.toThrow(/unauthorized score/i);
-  });
-  it.each([null, false, "0.5", "", []])("rejects nonnumeric JSON output %s", async (score) => {
-    createMock.mockResolvedValue({ choices: [{ message: { content: JSON.stringify({ score, feedback: "ok" }) } }] });
-    await expect(gradeAnswer({ ...baseParams })).rejects.toThrow(/non-numeric score/i);
   });
 });

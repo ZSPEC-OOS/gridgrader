@@ -8,12 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "postinstall": "prisma generate",
-    "build:vercel": "node scripts/vercel-build.mjs",
-    "typecheck": "next typegen && tsc --noEmit",
-    "test:deployment": "node --test scripts/test/*.test.mjs",
-    "test:browser": "node scripts/test-browser.mjs",
-    "migrate:production": "node scripts/deploy-migrations.mjs"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

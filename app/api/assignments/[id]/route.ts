@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveScoreStep } from "@/lib/scoreStep";
 import { prisma } from "@/lib/db";
 import { toErrorMessage } from "@/lib/apiError";
 
@@ -38,6 +39,7 @@ type QuestionUpdate = {
   id: string;
   criteria: string;
   maxScore: number;
+  scoreStep?: number;
 };
 
 export async function PATCH(
@@ -95,6 +97,7 @@ export async function PATCH(
                 Number.isFinite(q.maxScore) && q.maxScore > 0
                   ? q.maxScore
                   : 10,
+              scoreStep: resolveScoreStep(q.scoreStep),
             },
           })
         ),
