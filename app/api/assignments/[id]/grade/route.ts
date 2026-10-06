@@ -256,7 +256,8 @@ export async function POST(
 
 // Manual override: the instructor sets an exact score directly, bypassing
 // the AI entirely. No partial credit is enforced here the same way it is
-// for AI grading — the score must be a whole number, never a fraction.
+// for AI grading — the score must be a whole number, or exactly the
+// question's maximum (which may itself be a decimal such as 1.5).
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -270,9 +271,9 @@ export async function PATCH(
   if (!answerId) {
     return NextResponse.json({ error: "answerId is required." }, { status: 400 });
   }
-  if (!Number.isInteger(score)) {
+  if (!Number.isFinite(score)) {
     return NextResponse.json(
-      { error: "Score must be a whole number — no half points." },
+      { error: "Score must be a number." },
       { status: 400 }
     );
   }
@@ -287,9 +288,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Answer not found." }, { status: 404 });
     }
 
-    if (score < 0 || score > answer.question.maxScore) {
+    const max = answer.question.maxScore;
+    if (score < 0 || score > max) {
       return NextResponse.json(
-        { error: `Score must be between 0 and ${answer.question.maxScore}.` },
+        { error: `Score must be between 0 and ${max}.` },
+        { status: 400 }
+      );
+    }
+    if (!Number.isInteger(score) && score !== max) {
+      return NextResponse.json(
+        { error: `Score must be a whole number or full credit (${max}) — no half points.` },
         { status: 400 }
       );
     }

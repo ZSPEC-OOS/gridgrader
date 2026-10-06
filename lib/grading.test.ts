@@ -127,6 +127,18 @@ describe("score normalization", () => {
     expect(result.score).toBe(7);
     expect(Number.isInteger(result.score)).toBe(true);
   });
+
+  it("keeps full credit on a decimal question maximum", async () => {
+    createMock.mockResolvedValue(mockResponse(1.5));
+    const result = await gradeAnswer({ ...baseParams, maxScore: 1.5 });
+    expect(result.score).toBe(1.5);
+  });
+
+  it("still rounds partial scores on a decimal question maximum", async () => {
+    createMock.mockResolvedValue(mockResponse(0.9));
+    const result = await gradeAnswer({ ...baseParams, maxScore: 1.5 });
+    expect(result.score).toBe(1);
+  });
 });
 
 describe("prompt injection protection", () => {

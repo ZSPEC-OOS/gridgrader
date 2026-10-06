@@ -36,7 +36,7 @@ export function GradeCell({
 
   async function handleScoreClick() {
     if (editMode) {
-      setDraft(score !== null ? String(Math.round(score)) : "0");
+      setDraft(score !== null ? String(score) : "0");
       setEditing(true);
       return;
     }
@@ -57,11 +57,12 @@ export function GradeCell({
   function commitEdit() {
     const parsed = Number(draft);
     if (
-      !Number.isInteger(parsed) ||
+      !Number.isFinite(parsed) ||
       parsed < 0 ||
-      parsed > maxScore
+      parsed > maxScore ||
+      (!Number.isInteger(parsed) && parsed !== maxScore)
     ) {
-      alert(`Enter a whole number between 0 and ${maxScore}.`);
+      alert(`Enter a whole number between 0 and ${maxScore}, or full credit (${maxScore}).`);
       return;
     }
     setEditing(false);
@@ -73,7 +74,7 @@ export function GradeCell({
       <div className="flex items-center gap-1">
         <input
           type="number"
-          step={1}
+          step="any"
           min={0}
           max={maxScore}
           autoFocus

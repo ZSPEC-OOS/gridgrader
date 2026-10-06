@@ -220,7 +220,7 @@ export function GradeTable({
         />
         {editMode && (
           <span className="text-xs text-neutral-500 dark:text-muted">
-            Click a score to set it directly — whole points only.
+            Click a score to set it directly — whole points, or full credit.
           </span>
         )}
       </div>
@@ -319,7 +319,7 @@ export function GradeTable({
                     );
                   })}
                   <td className="px-4 py-2 text-sm font-semibold">
-                    {anyGraded ? `${total.toFixed(1)} / ${totalMax}` : "—"}
+                    {anyGraded ? `${total.toFixed(1)} / ${Number(totalMax.toFixed(2))}` : "—"}
                   </td>
                 </tr>
               );
