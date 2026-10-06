@@ -134,6 +134,14 @@ describe("score normalization", () => {
     expect(result.score).toBe(1.5);
   });
 
+  it("grades in 0.25 increments when the question allows it", async () => {
+    createMock.mockResolvedValue(mockResponse(1.3));
+    const result = await gradeAnswer({ ...baseParams, maxScore: 2, scoreStep: 0.25 });
+    expect(result.score).toBe(1.25);
+    const system = createMock.mock.calls[0][0].messages[0].content;
+    expect(system).toContain("increments of 0.25");
+  });
+
   it("still rounds partial scores on a decimal question maximum", async () => {
     createMock.mockResolvedValue(mockResponse(0.9));
     const result = await gradeAnswer({ ...baseParams, maxScore: 1.5 });

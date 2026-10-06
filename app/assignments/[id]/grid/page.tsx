@@ -50,6 +50,7 @@ export default async function GridPage({
           index: q.index,
           header: q.header,
           maxScore: q.maxScore,
+          scoreStep: q.scoreStep,
         }))}
         students={assignment.students.map((s) => ({
           id: s.id,

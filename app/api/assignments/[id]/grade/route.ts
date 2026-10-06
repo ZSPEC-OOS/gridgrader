@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAllowedScore } from "@/lib/scoreStep";
 import { prisma } from "@/lib/db";
 import { gradeAnswer } from "@/lib/grading";
 import { mapWithConcurrency } from "@/lib/concurrency";
@@ -82,6 +83,7 @@ export async function POST(
         questionHeader: job.answer.question.header,
         criteria: job.answer.question.criteria ?? "",
         maxScore: job.answer.question.maxScore,
+        scoreStep: job.answer.question.scoreStep,
         answerText: job.answer.text,
         gradingStrictnessLevel: resolveGradingStrictnessLevel(
           settings.gradingStrictnessLevel
@@ -185,6 +187,7 @@ export async function POST(
         questionHeader: question.header,
         criteria: question.criteria ?? "",
         maxScore: question.maxScore,
+        scoreStep: question.scoreStep,
         answerText: answer.text,
         gradingStrictnessLevel: resolveGradingStrictnessLevel(
           settings.gradingStrictnessLevel
@@ -256,8 +259,8 @@ export async function POST(
 
 // Manual override: the instructor sets an exact score directly, bypassing
 // the AI entirely. No partial credit is enforced here the same way it is
-// for AI grading — the score must be a whole number, or exactly the
-// question's maximum (which may itself be a decimal such as 1.5).
+// for AI grading — the score must be a multiple of the question's grading
+// increment, or exactly the question's maximum (which may be a decimal).
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -295,9 +298,11 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    if (!Number.isInteger(score) && score !== max) {
+    if (!isAllowedScore(score, max, answer.question.scoreStep)) {
       return NextResponse.json(
-        { error: `Score must be a whole number or full credit (${max}) — no half points.` },
+        {
+          error: `Score must be in increments of ${answer.question.scoreStep} (or full credit, ${max}) for this question.`,
+        },
         { status: 400 }
       );
     }

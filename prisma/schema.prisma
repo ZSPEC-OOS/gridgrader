@@ -37,6 +37,8 @@ model Question {
   header     String
   criteria   String?
   maxScore   Float      @default(10)
+  // Grading precision: 1 (whole), 0.5 or 0.25; see lib/scoreStep.ts.
+  scoreStep  Float      @default(1)
   answers    Answer[]
 
   @@unique([assignmentId, index])

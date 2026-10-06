@@ -1,10 +1,12 @@
 "use client";
 
+import { isAllowedScore } from "@/lib/scoreStep";
 import { useState } from "react";
 
 export function GradeCell({
   score,
   maxScore,
+  scoreStep,
   feedback,
   regradeMode,
   copyMode,
@@ -17,6 +19,7 @@ export function GradeCell({
 }: {
   score: number | null;
   maxScore: number;
+  scoreStep: number;
   feedback: string | null;
   regradeMode: boolean;
   copyMode: boolean;
@@ -60,9 +63,9 @@ export function GradeCell({
       !Number.isFinite(parsed) ||
       parsed < 0 ||
       parsed > maxScore ||
-      (!Number.isInteger(parsed) && parsed !== maxScore)
+      !isAllowedScore(parsed, maxScore, scoreStep)
     ) {
-      alert(`Enter a whole number between 0 and ${maxScore}, or full credit (${maxScore}).`);
+      alert(`Enter a score between 0 and ${maxScore} in increments of ${scoreStep} (or full credit, ${maxScore}).`);
       return;
     }
     setEditing(false);
@@ -74,7 +77,7 @@ export function GradeCell({
       <div className="flex items-center gap-1">
         <input
           type="number"
-          step="any"
+          step={scoreStep}
           min={0}
           max={maxScore}
           autoFocus

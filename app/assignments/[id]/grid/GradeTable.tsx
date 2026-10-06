@@ -11,6 +11,7 @@ type Question = {
   index: number;
   header: string;
   maxScore: number;
+  scoreStep: number;
 };
 
 type Student = {
@@ -220,7 +221,7 @@ export function GradeTable({
         />
         {editMode && (
           <span className="text-xs text-neutral-500 dark:text-muted">
-            Click a score to set it directly — whole points, or full credit.
+            Click a score to set it directly — in the increment set for that question (or full credit).
           </span>
         )}
       </div>
@@ -304,6 +305,7 @@ export function GradeTable({
                           <GradeCell
                             score={grade?.score ?? null}
                             maxScore={q.maxScore}
+                            scoreStep={q.scoreStep}
                             feedback={grade?.feedback ?? null}
                             regradeMode={regradeMode}
                             copyMode={copyMode}

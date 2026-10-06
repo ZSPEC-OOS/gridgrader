@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ScoreStepPicker } from "./ScoreStepPicker";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { parseJsonResponse } from "@/lib/apiClient";
@@ -19,6 +20,7 @@ type DraftQuestion = {
   header: string;
   criteria: string;
   maxScore: number;
+  scoreStep: number;
 };
 
 const STATUS_LABEL: Record<AssignmentSummary["status"], string> = {
@@ -122,7 +124,7 @@ export default function HomePage() {
       }
 
       setDraftQuestions(
-        headers.map((header) => ({ header, criteria: "", maxScore: 10 }))
+        headers.map((header) => ({ header, criteria: "", maxScore: 10, scoreStep: 1 }))
       );
     } catch (err) {
       setDraftQuestions(null);
@@ -170,6 +172,7 @@ export default function HomePage() {
           header: q.header,
           criteria: q.criteria,
           maxScore: q.maxScore,
+          scoreStep: q.scoreStep,
         }))
       )
     );
@@ -412,6 +415,10 @@ export default function HomePage() {
                       />
                     </label>
                   </div>
+                  <ScoreStepPicker
+                    value={q.scoreStep}
+                    onChange={(scoreStep) => updateDraft(i, { scoreStep })}
+                  />
                   <textarea
                     value={q.criteria}
                     onChange={(e) =>
