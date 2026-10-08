@@ -68,6 +68,7 @@ export default function HomePage() {
   const [gradingProgress, setGradingProgress] =
     useState<GradingProgress | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -300,6 +301,23 @@ export default function HomePage() {
     }
   }
 
+  async function handleArchive(id: string) {
+    setArchivingId(id);
+    try {
+      const res = await fetch(`/api/assignments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: true }),
+      });
+      await parseJsonResponse<{ ok: boolean }>(res);
+      await loadAssignments();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to archive.");
+    } finally {
+      setArchivingId(null);
+    }
+  }
+
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
     setDeletingId(id);
@@ -517,6 +535,17 @@ export default function HomePage() {
                           className="rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:border-red-500 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
                         >
                           {deletingId === a.id ? "Deleting…" : "Delete"}
+                        </button>
+                        <button
+                          onClick={() => handleArchive(a.id)}
+                          disabled={
+                            archivingId === a.id ||
+                            gradingId === a.id ||
+                            a.status === "GRADING"
+                          }
+                          className="rounded border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-brand-maroon hover:text-brand-maroon disabled:opacity-50 dark:border-border dark:text-foreground dark:hover:border-brand-crimson dark:hover:text-brand-crimson"
+                        >
+                          {archivingId === a.id ? "Archiving…" : "Archive"}
                         </button>
                       </div>
                     </td>

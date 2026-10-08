@@ -49,6 +49,19 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
+  // Archive / unarchive only — leaves name, criteria and status untouched.
+  if (typeof body.archived === "boolean" && body.name === undefined) {
+    try {
+      await prisma.assignment.update({
+        where: { id },
+        data: { archivedAt: body.archived ? new Date() : null },
+      });
+      return NextResponse.json({ ok: true });
+    } catch (err) {
+      return NextResponse.json({ error: toErrorMessage(err) }, { status: 500 });
+    }
+  }
+
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const questions: QuestionUpdate[] = Array.isArray(body.questions)
     ? body.questions
