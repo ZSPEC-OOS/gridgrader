@@ -199,7 +199,7 @@ export default function GradingPrepPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-10 space-y-8">
       <section>
-        <h1 className="text-2xl font-semibold tracking-tight">Grading Prep</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Scan Import</h1>
         <p className="mt-1 text-sm text-neutral-600 dark:text-muted">
           Drop a ZIP of student assignment/reflection screenshots (PNG). Each
           image is processed into one row of a spreadsheet — one column per

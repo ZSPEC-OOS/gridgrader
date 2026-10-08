@@ -530,6 +530,13 @@ export default function HomePage() {
                               : "Grade"}
                         </button>
                         <button
+                          onClick={() => handleDelete(a.id, a.name)}
+                          disabled={deletingId === a.id}
+                          className="rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:border-red-500 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+                        >
+                          {deletingId === a.id ? "Deleting…" : "Delete"}
+                        </button>
+                        <button
                           onClick={() => handleArchive(a.id)}
                           disabled={
                             archivingId === a.id ||
@@ -539,13 +546,6 @@ export default function HomePage() {
                           className="rounded border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-brand-maroon hover:text-brand-maroon disabled:opacity-50 dark:border-border dark:text-foreground dark:hover:border-brand-crimson dark:hover:text-brand-crimson"
                         >
                           {archivingId === a.id ? "Archiving…" : "Archive"}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(a.id, a.name)}
-                          disabled={deletingId === a.id}
-                          className="rounded border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:border-red-500 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
-                        >
-                          {deletingId === a.id ? "Deleting…" : "Delete"}
                         </button>
                       </div>
                     </td>
