@@ -25,6 +25,7 @@ model Assignment {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   gradedAt     DateTime?
+  archivedAt   DateTime?
   questions    Question[]
   students     Student[]
 }

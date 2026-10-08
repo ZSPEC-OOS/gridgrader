@@ -4,10 +4,12 @@ import { prisma } from "@/lib/db";
 import { parseWorkbook } from "@/lib/parseWorkbook";
 import { toErrorMessage } from "@/lib/apiError";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const archived = req.nextUrl.searchParams.get("archived") === "true";
   try {
     const assignments = await prisma.assignment.findMany({
-      orderBy: { createdAt: "desc" },
+      where: { archivedAt: archived ? { not: null } : null },
+      orderBy: archived ? { archivedAt: "desc" } : { createdAt: "desc" },
       include: {
         _count: { select: { students: true, questions: true } },
       },
@@ -22,6 +24,7 @@ export async function GET() {
         questionCount: a._count.questions,
         createdAt: a.createdAt,
         gradedAt: a.gradedAt,
+        archivedAt: a.archivedAt,
       }))
     );
   } catch (err) {
