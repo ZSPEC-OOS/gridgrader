@@ -299,3 +299,31 @@ test("blocks with nothing_to_send when every question is skipped", () => {
   assert.equal(adapter.updateScoresCalls.length, 0);
 });
 
+test("a skipped question's max-score mismatch does not block the others", () => {
+  const targets = twoMatchingTargets();
+  targets[0].maxScore = 2; // Canvas shows 2, GridGrader still has the default 10
+  const adapter = makeAdapter({ compatible: true, targets: targets });
+  const answers = twoQuestionAnswers();
+  answers[0] = { questionIndex: 0, score: null, maxScore: 10, skipped: true };
+  const result = runSendGrades(adapter, normalize, {
+    selectedStudent: { id: "s1", name: "Alice Smith", answers: answers },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.filled, 1);
+  assert.equal(targets[0].input.value, "");
+});
+
+test("a max-score mismatch on a non-skipped question still blocks, even when another is skipped", () => {
+  const targets = twoMatchingTargets();
+  targets[1].maxScore = 5;
+  const adapter = makeAdapter({ compatible: true, targets: targets });
+  const answers = twoQuestionAnswers();
+  answers[0] = { questionIndex: 0, score: null, maxScore: 10, skipped: true };
+  const result = runSendGrades(adapter, normalize, {
+    selectedStudent: { id: "s1", name: "Alice Smith", answers: answers },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "max_score_mismatch");
+  assert.equal(adapter.calls.length, 0);
+});
+

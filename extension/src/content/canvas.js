@@ -110,6 +110,10 @@
           debugInfo
         );
       }
+      // A skipped question is never written, and its point value in
+      // GridGrader is usually just the unedited default — so a differing
+      // Canvas max must not block the questions that are being sent.
+      if (answer.skipped) continue;
       if (target.maxScore !== null && target.maxScore !== answer.maxScore) {
         return blocked(
           "max_score_mismatch",
