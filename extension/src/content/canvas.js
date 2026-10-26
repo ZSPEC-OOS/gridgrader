@@ -123,7 +123,7 @@
             answer.maxScore +
             " but Canvas shows " +
             target.maxScore +
-            ".",
+            ". (This question is not marked Grading Skipped in the package you sent.)",
           { questionIndex: answer.questionIndex },
           debugInfo
         );
