@@ -363,5 +363,10 @@
     goToStudent("next");
   });
 
+  var versionEl = document.getElementById("ext-version");
+  if (versionEl && chrome.runtime && chrome.runtime.getManifest) {
+    versionEl.textContent = "v" + chrome.runtime.getManifest().version;
+  }
+
   loadFromStorage();
 })();
