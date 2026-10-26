@@ -40,6 +40,7 @@ type QuestionUpdate = {
   criteria: string;
   maxScore: number;
   scoreStep?: number;
+  gradingSkipped?: boolean;
 };
 
 export async function PATCH(
@@ -111,6 +112,7 @@ export async function PATCH(
                   ? q.maxScore
                   : 10,
               scoreStep: resolveScoreStep(q.scoreStep),
+              gradingSkipped: q.gradingSkipped === true,
             },
           })
         ),

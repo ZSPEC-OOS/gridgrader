@@ -21,6 +21,7 @@ type DraftQuestion = {
   criteria: string;
   maxScore: number;
   scoreStep: number;
+  gradingSkipped: boolean;
 };
 
 const STATUS_LABEL: Record<AssignmentSummary["status"], string> = {
@@ -125,7 +126,7 @@ export default function HomePage() {
       }
 
       setDraftQuestions(
-        headers.map((header) => ({ header, criteria: "", maxScore: 10, scoreStep: 1 }))
+        headers.map((header) => ({ header, criteria: "", maxScore: 10, scoreStep: 1, gradingSkipped: false }))
       );
     } catch (err) {
       setDraftQuestions(null);
@@ -174,6 +175,7 @@ export default function HomePage() {
           criteria: q.criteria,
           maxScore: q.maxScore,
           scoreStep: q.scoreStep,
+          gradingSkipped: q.gradingSkipped,
         }))
       )
     );
@@ -437,14 +439,29 @@ export default function HomePage() {
                     value={q.scoreStep}
                     onChange={(scoreStep) => updateDraft(i, { scoreStep })}
                   />
+                  <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-neutral-600 dark:text-muted">
+                    <input
+                      type="checkbox"
+                      checked={q.gradingSkipped}
+                      onChange={(e) =>
+                        updateDraft(i, { gradingSkipped: e.target.checked })
+                      }
+                      className="h-4 w-4 accent-brand-crimson"
+                    />
+                    Grading Skipped
+                    <span className="text-neutral-400 dark:text-muted">
+                      (I&apos;m grading this one myself)
+                    </span>
+                  </label>
                   <textarea
                     value={q.criteria}
+                    disabled={q.gradingSkipped}
                     onChange={(e) =>
                       updateDraft(i, { criteria: e.target.value })
                     }
                     placeholder="Paste the grading criteria / answer key for this question..."
-                    rows={5}
-                    className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 dark:border-border dark:bg-surface-muted dark:text-foreground dark:placeholder:text-muted"
+                    rows={q.gradingSkipped ? 2 : 5}
+                    className="mt-2 disabled:cursor-not-allowed disabled:opacity-40 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 dark:border-border dark:bg-surface-muted dark:text-foreground dark:placeholder:text-muted"
                   />
                 </div>
               ))}

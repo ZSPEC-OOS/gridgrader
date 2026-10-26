@@ -17,6 +17,11 @@ export type CanvasTransferAnswer = {
   questionIndex: number;
   score: number | null;
   maxScore: number;
+  // True when the instructor marked the question "Grading Skipped" — they
+  // grade it themselves in Canvas, so `score` is always null and the
+  // extension must leave that question's field untouched. Optional so a
+  // package from before this field existed still validates.
+  skipped?: boolean;
 };
 
 export type CanvasTransferStudent = {
@@ -197,6 +202,15 @@ export function validateCanvasTransferPackage(
         );
       }
 
+      if (a.skipped !== undefined && typeof a.skipped !== "boolean") {
+        throw new CanvasTransferValidationError(`${where}.skipped must be a boolean when present.`);
+      }
+      if (a.skipped === true && a.score !== null) {
+        throw new CanvasTransferValidationError(
+          `${where} is skipped, so its score must be null.`
+        );
+      }
+
       if (a.score !== null) {
         if (!isFiniteNumber(a.score) || (a.score as number) < 0 || (a.score as number) > questionMaxScore) {
           throw new CanvasTransferValidationError(
@@ -211,12 +225,15 @@ export function validateCanvasTransferPackage(
 }
 
 export function packageHasIncompleteScores(pkg: CanvasTransferPackageV1): boolean {
-  return pkg.students.some((s) => s.answers.some((a) => a.score === null));
+  return pkg.students.some((s) =>
+    s.answers.some((a) => a.score === null && !a.skipped)
+  );
 }
 
 export function countScoredAnswers(pkg: CanvasTransferPackageV1): number {
   return pkg.students.reduce(
-    (sum, s) => sum + s.answers.filter((a) => a.score !== null).length,
+    (sum, s) =>
+      sum + s.answers.filter((a) => a.score !== null && !a.skipped).length,
     0
   );
 }

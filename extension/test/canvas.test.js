@@ -250,3 +250,52 @@ test("runGoToStudent does not click prev when it's not available (e.g. first stu
   assert.equal(result.reason, "not_available");
   assert.equal(nav.prevCalls.length, 0);
 });
+
+test("skipped question is never validated, filled, or touched; the rest still go through", () => {
+  const targets = twoMatchingTargets();
+  targets[0].input.disabled = true; // would block if it were treated as sendable
+  const adapter = makeAdapter({ compatible: true, targets: targets });
+  const answers = twoQuestionAnswers();
+  answers[0] = { questionIndex: 0, score: null, maxScore: 10, skipped: true };
+  const result = runSendGrades(adapter, normalize, {
+    selectedStudent: { id: "s1", name: "Alice Smith", answers: answers },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.filled, 1);
+  assert.equal(result.skipped, 1);
+  assert.equal(adapter.calls.length, 1);
+  assert.equal(adapter.calls[0].input, targets[1].input);
+  assert.equal(targets[0].input.value, "");
+  assert.equal(adapter.updateScoresCalls.length, 1);
+});
+
+test("a skipped question's null score does not trigger null_score, but a non-skipped null still does", () => {
+  const adapter = makeAdapter({ compatible: true, targets: twoMatchingTargets() });
+  const answers = [
+    { questionIndex: 0, score: null, maxScore: 10, skipped: true },
+    { questionIndex: 1, score: null, maxScore: 2 },
+  ];
+  const result = runSendGrades(adapter, normalize, {
+    selectedStudent: { id: "s1", name: "Alice Smith", answers: answers },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "null_score");
+  assert.deepEqual(result.detail, { questionIndex: 1 });
+  assert.equal(adapter.calls.length, 0);
+});
+
+test("blocks with nothing_to_send when every question is skipped", () => {
+  const adapter = makeAdapter({ compatible: true, targets: twoMatchingTargets() });
+  const answers = [
+    { questionIndex: 0, score: null, maxScore: 10, skipped: true },
+    { questionIndex: 1, score: null, maxScore: 2, skipped: true },
+  ];
+  const result = runSendGrades(adapter, normalize, {
+    selectedStudent: { id: "s1", name: "Alice Smith", answers: answers },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "nothing_to_send");
+  assert.equal(adapter.calls.length, 0);
+  assert.equal(adapter.updateScoresCalls.length, 0);
+});
+

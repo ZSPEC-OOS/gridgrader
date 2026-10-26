@@ -12,6 +12,7 @@ type Question = {
   header: string;
   maxScore: number;
   scoreStep: number;
+  gradingSkipped: boolean;
 };
 
 type Student = {
@@ -62,7 +63,15 @@ export function GradeTable({
   // edit) leaves the score unchanged, so it never goes stale.
   const [scoreChanges, setScoreChanges] = useState<Record<string, number>>({});
 
-  const totalMax = questions.reduce((s, q) => s + q.maxScore, 0);
+  // Skipped questions are graded by the instructor elsewhere, so they stay
+  // out of the totals and are never regraded or exported from here.
+  const skippedQuestionIds = new Set(
+    questions.filter((q) => q.gradingSkipped).map((q) => q.id)
+  );
+  const totalMax = questions.reduce(
+    (s, q) => (q.gradingSkipped ? s : s + q.maxScore),
+    0
+  );
 
   function recordScoreChange(answerId: string, previousScore: number | null, newScore: number) {
     setScoreChanges((prev) => {
@@ -257,8 +266,13 @@ export function GradeTable({
                     <span className="ml-1 font-normal normal-case text-neutral-400 dark:text-muted">
                       ({q.maxScore} pts)
                     </span>
+                    {q.gradingSkipped && (
+                      <span className="ml-2 rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] font-medium normal-case text-neutral-600 dark:bg-border dark:text-muted">
+                        Grading skipped
+                      </span>
+                    )}
                   </div>
-                  {regradeMode && (
+                  {regradeMode && !q.gradingSkipped && (
                     <button
                       onClick={() => handleRegradeQuestion(q.id)}
                       disabled={regradingQuestionId === q.id}
@@ -282,11 +296,14 @@ export function GradeTable({
               const answerByQuestion = new Map(
                 student.answers.map((a) => [a.questionId, a])
               );
-              const total = student.answers.reduce(
+              const countedAnswers = student.answers.filter(
+                (a) => !skippedQuestionIds.has(a.questionId)
+              );
+              const total = countedAnswers.reduce(
                 (s, a) => s + (grades[a.id]?.score ?? 0),
                 0
               );
-              const anyGraded = student.answers.some((a) => grades[a.id]);
+              const anyGraded = countedAnswers.some((a) => grades[a.id]);
 
               return (
                 <tr
@@ -301,7 +318,12 @@ export function GradeTable({
                     const grade = answer ? grades[answer.id] : null;
                     return (
                       <td key={q.id} className="px-4 py-2">
-                        {answer && (
+                        {answer && q.gradingSkipped && (
+                          <span className="text-xs text-neutral-400 dark:text-muted">
+                            Skipped
+                          </span>
+                        )}
+                        {answer && !q.gradingSkipped && (
                           <GradeCell
                             score={grade?.score ?? null}
                             maxScore={q.maxScore}

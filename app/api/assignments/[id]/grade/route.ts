@@ -74,6 +74,13 @@ export async function POST(
       return NextResponse.json({ error: "Answer not found." }, { status: 404 });
     }
 
+    if (job.answer.question.gradingSkipped) {
+      return NextResponse.json(
+        { error: "Grading is skipped for this question." },
+        { status: 400 }
+      );
+    }
+
     try {
       const result = await gradeAnswer({
         apiKey: settings.apiKey!,
@@ -135,12 +142,20 @@ export async function POST(
   // the raw `answers` array order, so offset-based paging can't skip or
   // duplicate an answer between requests.
   const questionById = new Map(assignment.questions.map((q) => [q.id, q]));
+  // Questions marked "Grading Skipped" are the instructor's to grade — the
+  // AI never touches them, so any scores already entered survive a run.
   const questionsForBatch = questionId
     ? assignment.questions.filter((q) => q.id === questionId)
-    : assignment.questions;
+    : assignment.questions.filter((q) => !q.gradingSkipped);
 
   if (questionId && questionsForBatch.length === 0) {
     return NextResponse.json({ error: "Question not found." }, { status: 404 });
+  }
+  if (questionId && questionsForBatch[0].gradingSkipped) {
+    return NextResponse.json(
+      { error: "Grading is skipped for this question." },
+      { status: 400 }
+    );
   }
 
   const answerJobs = assignment.students.flatMap((student) => {

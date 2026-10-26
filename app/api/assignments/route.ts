@@ -37,6 +37,7 @@ type CriteriaInput = {
   criteria: string;
   maxScore: number;
   scoreStep?: number;
+  gradingSkipped?: boolean;
 };
 
 export async function POST(req: NextRequest) {
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
                 ? criteriaList[i].maxScore
                 : 10,
             scoreStep: resolveScoreStep(criteriaList[i]?.scoreStep),
+            gradingSkipped: criteriaList[i]?.gradingSkipped === true,
           })),
         },
         students: {

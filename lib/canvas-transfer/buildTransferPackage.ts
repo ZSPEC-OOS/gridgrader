@@ -11,6 +11,8 @@ export type BuildTransferPackageInput = {
     index: number;
     header: string;
     maxScore: number;
+    // Instructor grades this question themselves; never exported as a score.
+    gradingSkipped?: boolean;
   }>;
   students: Array<{
     id: string;
@@ -36,6 +38,9 @@ export function buildTransferPackage(
 
   const maxScoreByQuestionId = new Map(questions.map((q) => [q.id, q.maxScore]));
   const indexByQuestionId = new Map(questions.map((q) => [q.id, q.index]));
+  const skippedQuestionIds = new Set(
+    questions.filter((q) => q.gradingSkipped).map((q) => q.id)
+  );
 
   const pkg: CanvasTransferPackageV1 = {
     schema: "gridgrader.canvas-transfer",
@@ -65,6 +70,19 @@ export function buildTransferPackage(
           throw new Error(
             `Answer ${answer.id} references unknown question ${answer.questionId}.`
           );
+        }
+
+        // A skipped question is always sent as null — even if the grid holds
+        // a score for it from an earlier run — so the extension can't push it.
+        if (skippedQuestionIds.has(answer.questionId)) {
+          return {
+            answerId: answer.id,
+            questionId: answer.questionId,
+            questionIndex,
+            score: null,
+            maxScore,
+            skipped: true,
+          };
         }
 
         return {

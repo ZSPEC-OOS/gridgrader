@@ -23,12 +23,18 @@ export async function GET(
 
   try {
     const total = await prisma.answer.count({
-      where: { student: { assignmentId: id } },
+      where: {
+        student: { assignmentId: id },
+        question: { gradingSkipped: false },
+      },
     });
 
     const graded = await prisma.grade.count({
       where: {
-        answer: { student: { assignmentId: id } },
+        answer: {
+          student: { assignmentId: id },
+          question: { gradingSkipped: false },
+        },
         ...(sinceDate && !isNaN(sinceDate.getTime())
           ? { gradedAt: { gte: sinceDate } }
           : {}),

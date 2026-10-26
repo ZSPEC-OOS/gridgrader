@@ -13,6 +13,7 @@ type Question = {
   criteria: string | null;
   maxScore: number;
   scoreStep: number;
+  gradingSkipped: boolean;
 };
 
 type AssignmentDetail = {
@@ -81,6 +82,7 @@ export default function EditAssignmentPage({
             criteria: q.criteria ?? "",
             maxScore: q.maxScore,
             scoreStep: q.scoreStep,
+            gradingSkipped: q.gradingSkipped,
           })),
         }),
       });
@@ -177,14 +179,29 @@ export default function EditAssignmentPage({
                 value={q.scoreStep}
                 onChange={(scoreStep) => updateQuestion(q.id, { scoreStep })}
               />
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-neutral-600 dark:text-muted">
+                <input
+                  type="checkbox"
+                  checked={q.gradingSkipped}
+                  onChange={(e) =>
+                    updateQuestion(q.id, { gradingSkipped: e.target.checked })
+                  }
+                  className="h-4 w-4 accent-brand-crimson"
+                />
+                Grading Skipped
+                <span className="text-neutral-400 dark:text-muted">
+                  (I&apos;m grading this one myself)
+                </span>
+              </label>
               <textarea
                 value={q.criteria ?? ""}
+                disabled={q.gradingSkipped}
                 onChange={(e) =>
                   updateQuestion(q.id, { criteria: e.target.value })
                 }
                 placeholder="Paste the grading criteria / answer key for this question..."
-                rows={5}
-                className="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 dark:border-border dark:bg-surface-muted dark:text-foreground dark:placeholder:text-muted"
+                rows={q.gradingSkipped ? 2 : 5}
+                className="mt-2 disabled:cursor-not-allowed disabled:opacity-40 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 dark:border-border dark:bg-surface-muted dark:text-foreground dark:placeholder:text-muted"
               />
             </div>
           ))}
