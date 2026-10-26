@@ -118,4 +118,19 @@ describe("buildTransferPackage", () => {
     });
     expect(pkg.exportedAt).toBe("2026-01-01T00:00:00.000Z");
   });
+
+  it("exports a skipped question as skipped/null even when the grid holds a score", () => {
+    const pkg = buildTransferPackage({
+      assignmentId: "asg1",
+      assignmentName: "Bio 191 Quiz",
+      questions: [{ ...questions[0], gradingSkipped: true }, questions[1]],
+      students,
+      grades: { a1: { score: 8 }, a2: { score: 4 }, a3: { score: 3 }, a4: { score: 5 } },
+    });
+    const [alice, bob] = pkg.students;
+    expect(alice.answers[0]).toMatchObject({ score: null, skipped: true });
+    expect(alice.answers[1]).toMatchObject({ score: 4 });
+    expect(alice.answers[1].skipped).toBeUndefined();
+    expect(bob.answers[0]).toMatchObject({ score: null, skipped: true });
+  });
 });

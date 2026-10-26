@@ -158,3 +158,32 @@ describe("packageHasIncompleteScores / countScoredAnswers", () => {
     expect(countScoredAnswers(pkg)).toBe(3);
   });
 });
+
+describe("skipped answers", () => {
+  it("accepts a skipped answer with a null score and does not count it as incomplete", () => {
+    const pkg = basePackage();
+    pkg.students[1].answers[1].score = 1; // the fixture leaves this one unscored
+    for (const s of pkg.students) {
+      s.answers[0].score = null;
+      s.answers[0].skipped = true;
+    }
+    expect(() => validateCanvasTransferPackage(pkg)).not.toThrow();
+    expect(packageHasIncompleteScores(pkg)).toBe(false);
+    expect(countScoredAnswers(pkg)).toBe(
+      pkg.students.reduce((n, s) => n + s.answers.length - 1, 0)
+    );
+  });
+
+  it("rejects a skipped answer that carries a score", () => {
+    const pkg = basePackage();
+    pkg.students[0].answers[0].skipped = true;
+    expect(() => validateCanvasTransferPackage(pkg)).toThrow(/skipped.*null/i);
+  });
+
+  it("rejects a non-boolean skipped flag", () => {
+    const pkg = basePackage();
+    (pkg.students[0].answers[0] as { skipped?: unknown }).skipped = "yes";
+    expect(() => validateCanvasTransferPackage(pkg)).toThrow(/skipped must be a boolean/i);
+  });
+});
+

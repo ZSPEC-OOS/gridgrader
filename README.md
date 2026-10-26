@@ -9,6 +9,11 @@ question, and let an AI model grade the class against that rubric.
    the student's name; every column after it is one question. The app shows
    a criteria box per detected question — paste the rubric / answer key for
    each, set a point value, and click **Save**.
+   Tick **Grading Skipped** on any question the instructor is grading
+   themselves: its criteria box is disabled, the AI never grades it
+   (full runs, per-question regrades and single-cell regrades all refuse
+   it), it is left out of the grid totals, and it is not sent to Canvas.
+   The flag can be changed later from **Edit assignment**.
 2. Saved assignments appear in the list below with a **Grade** button.
 3. Clicking **Grade** sends every student's answer, paired with that
    question's criteria, to the AI model configured on the **Settings**

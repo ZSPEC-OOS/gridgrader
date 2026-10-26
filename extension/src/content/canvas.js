@@ -126,9 +126,24 @@
       }
     }
 
+    // Questions the instructor marked "Grading Skipped" are theirs to grade
+    // in Canvas: they are counted above (so the page still has to line up
+    // with the export) but never validated for a score, filled, or touched.
+    var sendable = selectedStudent.answers.filter(function (a) {
+      return !a.skipped;
+    });
+    if (sendable.length === 0) {
+      return blocked(
+        "nothing_to_send",
+        "Every question is marked Grading Skipped, so there is nothing to send.",
+        null,
+        debugInfo
+      );
+    }
+
     // Null/ungraded scores are never silently sent as zero.
-    for (i = 0; i < selectedStudent.answers.length; i++) {
-      answer = selectedStudent.answers[i];
+    for (i = 0; i < sendable.length; i++) {
+      answer = sendable[i];
       if (answer.score === null || !Number.isFinite(answer.score)) {
         return blocked(
           "null_score",
@@ -139,8 +154,8 @@
       }
     }
 
-    for (i = 0; i < selectedStudent.answers.length; i++) {
-      answer = selectedStudent.answers[i];
+    for (i = 0; i < sendable.length; i++) {
+      answer = sendable[i];
       target = targetsByIndex[answer.questionIndex];
       if (!target.input || target.input.disabled || target.input.readOnly) {
         return blocked(
@@ -168,8 +183,8 @@
     // immediately (reporting partial progress) if a write doesn't stick —
     // never assume the DOM held still for the whole batch.
     var filled = 0;
-    for (i = 0; i < selectedStudent.answers.length; i++) {
-      answer = selectedStudent.answers[i];
+    for (i = 0; i < sendable.length; i++) {
+      answer = sendable[i];
       target = targetsByIndex[answer.questionIndex];
 
       adapter.setScore(target.input, answer.score);
@@ -203,6 +218,7 @@
     return {
       ok: true,
       filled: filled,
+      skipped: selectedStudent.answers.length - sendable.length,
       updateScoresClicked: updateScoresClicked,
       debug: debugInfo,
     };

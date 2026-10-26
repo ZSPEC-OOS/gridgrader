@@ -19,7 +19,13 @@ export function CanvasTransferButton({
 }: {
   assignmentId: string;
   assignmentName: string;
-  questions: Array<{ id: string; index: number; header: string; maxScore: number }>;
+  questions: Array<{
+    id: string;
+    index: number;
+    header: string;
+    maxScore: number;
+    gradingSkipped: boolean;
+  }>;
   students: Array<{ id: string; name: string; answers: Array<{ id: string; questionId: string }> }>;
   grades: Record<string, Grade>;
 }) {
@@ -27,9 +33,21 @@ export function CanvasTransferButton({
   const [pendingPackage, setPendingPackage] = useState<CanvasTransferPackageV1 | null>(null);
   const [sentAt, setSentAt] = useState<Date | null>(null);
 
+  const skippedQuestionIds = useMemo(
+    () => new Set(questions.filter((q) => q.gradingSkipped).map((q) => q.id)),
+    [questions]
+  );
+  const skippedCount = skippedQuestionIds.size;
+
+  // Skipped questions aren't sent, so they don't count toward "scored".
   const totalAnswers = useMemo(
-    () => students.reduce((sum, s) => sum + s.answers.length, 0),
-    [students]
+    () =>
+      students.reduce(
+        (sum, s) =>
+          sum + s.answers.filter((a) => !skippedQuestionIds.has(a.questionId)).length,
+        0
+      ),
+    [students, skippedQuestionIds]
   );
 
   const hasRequiredData = questions.length > 0 && students.length > 0;
@@ -83,10 +101,14 @@ export function CanvasTransferButton({
   const scored = useMemo(
     () =>
       students.reduce(
-        (sum, s) => sum + s.answers.filter((a) => grades[a.id]?.score != null).length,
+        (sum, s) =>
+          sum +
+          s.answers.filter(
+            (a) => !skippedQuestionIds.has(a.questionId) && grades[a.id]?.score != null
+          ).length,
         0
       ),
-    [students, grades]
+    [students, grades, skippedQuestionIds]
   );
 
   return (
@@ -103,6 +125,8 @@ export function CanvasTransferButton({
         <span className="text-xs text-neutral-500 dark:text-muted">
           {students.length} students · {questions.length} questions ·{" "}
           {scored}/{totalAnswers} answers scored
+          {skippedCount > 0 &&
+            ` · ${skippedCount} question${skippedCount === 1 ? "" : "s"} skipped (not sent)`}
         </span>
       </div>
 

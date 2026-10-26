@@ -188,6 +188,13 @@
           );
         }
 
+        if (a.skipped !== undefined && typeof a.skipped !== "boolean") {
+          throw CanvasTransferValidationError(where + ".skipped must be a boolean when present.");
+        }
+        if (a.skipped === true && a.score !== null) {
+          throw CanvasTransferValidationError(where + " is skipped, so its score must be null.");
+        }
+
         if (a.score !== null) {
           if (!isFiniteNumber(a.score) || a.score < 0 || a.score > questionMaxScore) {
             throw CanvasTransferValidationError(
@@ -204,7 +211,7 @@
   function packageHasIncompleteScores(pkg) {
     return pkg.students.some(function (s) {
       return s.answers.some(function (a) {
-        return a.score === null;
+        return a.score === null && !a.skipped;
       });
     });
   }

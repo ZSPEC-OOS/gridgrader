@@ -40,6 +40,9 @@ model Question {
   maxScore   Float      @default(10)
   // Grading precision: 1 (whole), 0.5 or 0.25; see lib/scoreStep.ts.
   scoreStep  Float      @default(1)
+  // When true the instructor is grading this question themselves: the AI
+  // never grades it, and it is excluded from the Canvas transfer.
+  gradingSkipped Boolean @default(false)
   answers    Answer[]
 
   @@unique([assignmentId, index])

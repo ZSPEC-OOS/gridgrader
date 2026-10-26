@@ -114,7 +114,7 @@
         var qCell = document.createElement("td");
         qCell.textContent = questionHeaderByIndex(state.pkg, a.questionIndex);
         var scoreCell = document.createElement("td");
-        scoreCell.textContent = a.score === null ? "—" : String(a.score);
+        scoreCell.textContent = a.skipped ? "Skipped" : a.score === null ? "—" : String(a.score);
         var maxCell = document.createElement("td");
         maxCell.textContent = String(a.maxScore);
         row.appendChild(qCell);
@@ -297,6 +297,7 @@
               "Fields filled (" +
               response.filled +
               ")" +
+              (response.skipped ? ", " + response.skipped + " skipped question(s) left untouched" : "") +
               (response.updateScoresClicked ? " and Update Scores clicked." : " — Update Scores was NOT clicked; check Canvas.") +
               " GridGrader can't verify Canvas actually saved it — check the page.";
 

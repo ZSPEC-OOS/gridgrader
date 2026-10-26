@@ -108,3 +108,21 @@ test("createCanvasExportMessage has the exact envelope the receiver expects", ()
   assert.equal(message.payload.schema, "gridgrader.canvas-transfer");
   assert.equal(message.payload.version, 1);
 });
+
+test("skipped answer with null score validates and is not 'incomplete'", () => {
+  const pkg = basePackage();
+  pkg.students[1].answers[1].score = 1; // the fixture leaves this one unscored
+  pkg.students.forEach((s) => {
+    s.answers[0].score = null;
+    s.answers[0].skipped = true;
+  });
+  assert.doesNotThrow(() => validateCanvasTransferPackage(pkg));
+  assert.equal(packageHasIncompleteScores(pkg), false);
+});
+
+test("skipped answer that carries a score is rejected", () => {
+  const pkg = basePackage();
+  pkg.students[0].answers[0].skipped = true;
+  assert.throws(() => validateCanvasTransferPackage(pkg), /skipped/);
+});
+

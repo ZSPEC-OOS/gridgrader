@@ -47,7 +47,12 @@ part of the same action.)
    them — you still get to see MATCH/MISMATCH before doing anything, this
    just saves you re-opening the dropdown each time. **Prev ◀** works the
    same way backward. Neither button fills or sends anything by itself.
-7. Confirm in Canvas periodically that the values look right — this
+7. Questions marked **Grading Skipped** in GridGrader arrive flagged as
+   skipped: the popup shows "Skipped" for them, and **Update Grades**
+   never validates, fills or alters their Canvas fields (the question
+   count and max-score checks still apply to the whole page). If every
+   question is skipped there is nothing to send and the extension blocks.
+8. Confirm in Canvas periodically that the values look right — this
    automates the navigation and the two clicks, it doesn't remove the
    value of spot-checking, especially early on with a new quiz/course.
 
