@@ -50,6 +50,7 @@ export function GradeTable({
   const [regradeMode, setRegradeMode] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [studentSort, setStudentSort] = useState<"original" | "name-asc">("original");
   const [regradingId, setRegradingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [regradingQuestionId, setRegradingQuestionId] = useState<string | null>(null);
@@ -62,6 +63,10 @@ export function GradeTable({
   // the "changed" dot on the cell. Cleared once a later regrade (or manual
   // edit) leaves the score unchanged, so it never goes stale.
   const [scoreChanges, setScoreChanges] = useState<Record<string, number>>({});
+
+  const displayedStudents = studentSort === "name-asc"
+    ? [...students].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+    : students;
 
   // Skipped questions are graded by the instructor elsewhere, so they stay
   // out of the totals and are never regraded or exported from here.
@@ -228,6 +233,18 @@ export function GradeTable({
           onChange={setEditMode}
           label="Manual override"
         />
+        <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-foreground">
+          Sort names
+          <select
+            aria-label="Sort students by name"
+            value={studentSort}
+            onChange={(event) => setStudentSort(event.target.value as "original" | "name-asc")}
+            className="rounded border border-neutral-300 bg-white px-2 py-1 text-sm text-neutral-900 dark:border-border dark:bg-surface dark:text-foreground"
+          >
+            <option value="original">Original order</option>
+            <option value="name-asc">A–Z</option>
+          </select>
+        </label>
         {editMode && (
           <span className="text-xs text-neutral-500 dark:text-muted">
             Click a score to set it directly — in the increment set for that question (or full credit).
@@ -292,7 +309,7 @@ export function GradeTable({
             </tr>
           </thead>
           <tbody className="text-neutral-900 dark:text-foreground">
-            {students.map((student) => {
+            {displayedStudents.map((student) => {
               const answerByQuestion = new Map(
                 student.answers.map((a) => [a.questionId, a])
               );
